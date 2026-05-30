@@ -143,11 +143,34 @@
         @keyframes fadeIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
         select.day-transport-select{appearance:none;-webkit-appearance:none;background:#f5f3ff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236d28d9' d='M6 8L1 3h10z'/%3E%3C/svg%3E") no-repeat right 12px center;padding-right:32px;border:2px solid #ddd6fe;color:#6d28d9;font-weight:500}
         select.day-transport-select:focus{border-color:#7c3aed;box-shadow:0 0 0 3px rgba(124,58,237,0.1)}
+        /* auth styles */
+        .user-bar{display:flex;align-items:center;justify-content:center;gap:12px;padding:8px 20px;background:rgba(255,255,255,0.15);border-radius:30px;margin:0 auto 4px;max-width:420px;backdrop-filter:blur(10px);flex-wrap:wrap}
+        .user-bar .user-email{color:white;font-size:0.88rem;font-weight:500;display:flex;align-items:center;gap:6px}
+        .user-bar .sync-badge{font-size:0.75rem;padding:2px 10px;border-radius:20px;font-weight:600}
+        .sync-on{background:#d1fae5;color:#065f46}.sync-off{background:#fef3c7;color:#92400e}
+        .btn-auth{padding:6px 18px;border:none;border-radius:20px;font-size:0.82rem;font-weight:600;cursor:pointer;transition:all 0.3s;font-family:inherit}
+        .btn-login{background:rgba(255,255,255,0.9);color:#667eea}.btn-login:hover{background:white;transform:translateY(-1px)}
+        .btn-logout{background:rgba(255,255,255,0.2);color:white;border:1px solid rgba(255,255,255,0.3)}.btn-logout:hover{background:rgba(255,255,255,0.3)}
+        .auth-card{background:white;border-radius:20px;padding:32px;max-width:380px;margin:0 auto;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.2)}
+        .auth-card h3{color:#333;font-size:1.3rem;margin-bottom:6px}
+        .auth-card p{color:#888;font-size:0.85rem;margin-bottom:20px}
+        .auth-card .form-group{text-align:left;margin-bottom:14px}
+        .auth-card .auth-btns{display:flex;gap:10px;margin-top:18px}
+        .auth-card .auth-btns button{flex:1}
+        .auth-toggle{color:#667eea;cursor:pointer;font-size:0.88rem;font-weight:500;margin-top:14px;display:inline-block}
+        .auth-toggle:hover{text-decoration:underline}
+        .auth-error{color:#ef4444;font-size:0.82rem;margin-top:8px;text-align:left}
     </style>
 </head>
 <body>
     <div class="container" id="mainPage">
         <header class="header"><h1>✈️ 正义之旅</h1><p>记录每一段旅程，珍藏每一份回忆</p></header>
+        <div class="user-bar" id="userBar">
+            <span id="userInfo" style="display:none;" class="user-email">👤 <span id="userEmail"></span></span>
+            <span id="syncBadge" style="display:none;" class="sync-badge sync-on">☁️ 已同步</span>
+            <button class="btn-auth btn-login" id="btnAuth" onclick="openAuthModal()">🔑 登录 / 注册</button>
+            <button class="btn-auth btn-logout" id="btnLogout" style="display:none;" onclick="handleLogout()">🚪 退出</button>
+        </div>
         <div class="stats-container">
             <div class="stat-card clickable" onclick="openDetail('trips')"><div class="icon">🗺️</div><div class="value" id="totalTrips">0</div><div class="label">行程总数</div></div>
             <div class="stat-card clickable" onclick="openDetail('places')"><div class="icon">📍</div><div class="value" id="totalPlaces">0</div><div class="label">到访地点</div></div>
@@ -164,6 +187,20 @@
             </div>
         </div>
     </div>
+    <div class="modal-overlay" id="authModal"><div class="modal-container"><div class="modal-header"><h2>🔐 账号登录</h2><button class="modal-close" onclick="closeAuthModal()">✕</button></div><div class="modal-body">
+        <div class="auth-card" style="box-shadow:none;padding:0;">
+            <h3 id="authTitle">欢迎回来</h3>
+            <p id="authSubtitle">登录后数据将同步至云端，多设备共享</p>
+            <div class="form-group"><label>📧 邮箱</label><input type="email" id="authEmail" placeholder="your@email.com" autocomplete="email"></div>
+            <div class="form-group"><label>🔑 密码</label><input type="password" id="authPassword" placeholder="至少6位" autocomplete="current-password"></div>
+            <div class="auth-error" id="authError" style="display:none;"></div>
+            <div class="auth-btns">
+                <button class="btn btn-primary" id="btnLogin" onclick="handleAuth('login')">🔑 登录</button>
+                <button class="btn btn-secondary" id="btnRegister" onclick="handleAuth('register')">📝 注册</button>
+            </div>
+            <span class="auth-toggle" id="authToggle" onclick="toggleAuthMode()">还没有账号？点此注册</span>
+        </div>
+    </div></div></div>
     <div class="modal-overlay" id="detailModal"><div class="modal-container"><div class="modal-header"><h2 id="detailTitle">📋 明细</h2><button class="modal-close" onclick="closeDetailModal()">✕</button></div><div class="modal-body" id="detailBody"></div></div></div>
     <div class="modal-overlay" id="formModal"><div class="modal-container"><div class="modal-header"><h2><span id="formTitle">📝 添加行程</span></h2><button class="modal-close" onclick="closeFormModal()">✕</button></div><div class="modal-body">
         <form id="tripForm"><input type="hidden" id="editId" value="">
@@ -180,7 +217,182 @@
     <input type="file" id="importInput" accept=".json" onchange="importData(event)">
     <button class="export-btn" onclick="exportData()">📥</button>
     <div class="toast" id="toast"></div>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
+// ========== FIREBASE CONFIG ==========
+// ⚠️ 请替换为你的 Firebase 项目配置
+const firebaseConfig = {
+  apiKey: "AIzaSyDt7X9aCjLE733nCR0AR-PzkKoEpohpqLs",
+  authDomain: "justice-trip.firebaseapp.com",
+  projectId: "justice-trip",
+  storageBucket: "justice-trip.firebasestorage.app",
+  messagingSenderId: "772815343697",
+  appId: "1:772815343697:web:c20f0224321e990682a870"
+};
+
+let fbApp=null, fbAuth=null, fbDb=null, currentUser=null, isSyncing=false;
+const FIREBASE_CONFIGURED = firebaseConfig.apiKey !== "YOUR_API_KEY";
+
+if(FIREBASE_CONFIGURED){
+  try{
+    fbApp=firebase.initializeApp(firebaseConfig);
+    fbAuth=firebase.auth();
+    fbDb=firebase.firestore();
+    fbAuth.onAuthStateChanged(async user=>{
+      currentUser=user;
+      updateAuthUI();
+      if(user){
+        isSyncing=true;
+        await syncFromCloud();
+        isSyncing=false;
+      }
+    });
+  }catch(e){console.warn('Firebase init error:',e);}
+}
+
+// ========== AUTH UI ==========
+let authMode='login'; // 'login' or 'register'
+function openAuthModal(){
+  authMode='login'; updateAuthModeUI();
+  document.getElementById('authEmail').value='';
+  document.getElementById('authPassword').value='';
+  document.getElementById('authError').style.display='none';
+  document.getElementById('authModal').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function closeAuthModal(){document.getElementById('authModal').classList.remove('open');document.body.style.overflow='';}
+function toggleAuthMode(){
+  authMode=authMode==='login'?'register':'login';
+  updateAuthModeUI();
+}
+function updateAuthModeUI(){
+  const isLogin=authMode==='login';
+  document.getElementById('authTitle').textContent=isLogin?'欢迎回来':'创建账号';
+  document.getElementById('authSubtitle').textContent=isLogin?'登录后数据将同步至云端，多设备共享':'注册后即可在云端保存行程数据';
+  document.getElementById('btnLogin').style.display=isLogin?'block':'none';
+  document.getElementById('btnRegister').style.display=isLogin?'none':'block';
+  document.getElementById('authToggle').textContent=isLogin?'还没有账号？点此注册':'已有账号？点此登录';
+}
+
+async function handleAuth(mode){
+  if(!FIREBASE_CONFIGURED){showToast('请先配置 Firebase 项目','error');return;}
+  const email=document.getElementById('authEmail').value.trim();
+  const password=document.getElementById('authPassword').value;
+  const errEl=document.getElementById('authError');
+  errEl.style.display='none';
+  if(!email||!password){errEl.textContent='请填写邮箱和密码';errEl.style.display='block';return;}
+  try{
+    if(mode==='register'){
+      await fbAuth.createUserWithEmailAndPassword(email,password);
+      showToast('注册成功！数据已开始同步','success');
+    }else{
+      await fbAuth.signInWithEmailAndPassword(email,password);
+      showToast('登录成功！正在同步数据...','success');
+    }
+    closeAuthModal();
+  }catch(e){
+    const msgs={
+      'auth/email-already-in-use':'该邮箱已被注册',
+      'auth/invalid-email':'邮箱格式不正确',
+      'auth/weak-password':'密码至少6位',
+      'auth/user-not-found':'账号不存在',
+      'auth/wrong-password':'密码错误',
+      'auth/invalid-credential':'邮箱或密码不正确',
+      'auth/too-many-requests':'尝试次数过多，请稍后再试'
+    };
+    errEl.textContent=msgs[e.code]||e.message;
+    errEl.style.display='block';
+  }
+}
+
+function handleLogout(){
+  if(!fbAuth)return;
+  fbAuth.signOut();
+  showToast('已退出登录','success');
+}
+
+function updateAuthUI(){
+  const loggedIn=!!currentUser;
+  document.getElementById('btnAuth').style.display=loggedIn?'none':'inline-flex';
+  document.getElementById('btnLogout').style.display=loggedIn?'inline-flex':'none';
+  document.getElementById('userInfo').style.display=loggedIn?'inline-flex':'none';
+  document.getElementById('syncBadge').style.display=loggedIn?'inline-flex':'none';
+  if(loggedIn){
+    document.getElementById('userEmail').textContent=currentUser.email;
+  }
+}
+
+// ========== CLOUD SYNC ==========
+async function syncFromCloud(){
+  if(!currentUser||!fbDb)return;
+  try{
+    const snap=await fbDb.collection('users').doc(currentUser.uid).collection('trips').get();
+    const cloudTrips=[];
+    snap.forEach(doc=>cloudTrips.push(doc.data()));
+    // merge: cloud wins for same id (latest updatedAt)
+    const localMap={},cloudMap={};
+    trips.forEach(t=>localMap[t.id]=t);
+    cloudTrips.forEach(t=>cloudMap[t.id]=t);
+    const mergedIds=new Set([...Object.keys(localMap),...Object.keys(cloudMap)]);
+    const merged=[];
+    mergedIds.forEach(id=>{
+      const l=localMap[id],c=cloudMap[id];
+      if(l&&c){
+        merged.push((l.updatedAt||0)>(c.updatedAt||0)?l:c);
+      }else{
+        merged.push(l||c);
+      }
+    });
+    // upload local-only trips
+    const localOnly=Object.keys(localMap).filter(id=>!cloudMap[id]);
+    for(const id of localOnly){
+      const t=localMap[id];
+      await fbDb.collection('users').doc(currentUser.uid).collection('trips').doc(String(t.id)).set(t);
+    }
+    trips=merged;
+    saveTripsLocal();
+    renderTrips();
+    updateStats();
+    updateSyncBadge(true);
+  }catch(e){
+    console.warn('Sync from cloud failed:',e);
+    updateSyncBadge(false);
+  }
+}
+
+async function saveTripToCloud(trip){
+  if(!currentUser||!fbDb||!FIREBASE_CONFIGURED)return;
+  try{
+    await fbDb.collection('users').doc(currentUser.uid).collection('trips').doc(String(trip.id)).set(trip);
+    updateSyncBadge(true);
+  }catch(e){
+    console.warn('Save to cloud failed:',e);
+    updateSyncBadge(false);
+  }
+}
+
+async function deleteTripFromCloud(tripId){
+  if(!currentUser||!fbDb||!FIREBASE_CONFIGURED)return;
+  try{
+    await fbDb.collection('users').doc(currentUser.uid).collection('trips').doc(String(tripId)).delete();
+    updateSyncBadge(true);
+  }catch(e){
+    console.warn('Delete from cloud failed:',e);
+    updateSyncBadge(false);
+  }
+}
+
+function updateSyncBadge(ok){
+  const badge=document.getElementById('syncBadge');
+  if(!currentUser){badge.style.display='none';return;}
+  badge.style.display='inline-flex';
+  badge.className='sync-badge '+(ok?'sync-on':'sync-off');
+  badge.textContent=ok?'☁️ 已同步':'⚠️ 同步失败';
+}
+
 // ========== COST HELPERS ==========
 const COST_KEYS = ['hotel','transport','food','other'];
 const COST_LABELS = {hotel:'🏨 住宿',transport:'🚗 交通',food:'🍽️ 餐饮',other:'📦 其他'};
@@ -203,7 +415,11 @@ let editingId=null,dayCounter=0;
 let geoCache=JSON.parse(localStorage.getItem('justiceGeoCache'))||{};
 const TRANSPORT_MODES={car:{label:'🚗 自驾',baiduMode:'driving'},train:{label:'🚄 火车/高铁',baiduMode:'transit'},plane:{label:'✈️ 飞机',baiduMode:'driving'},bus:{label:'🚌 大巴',baiduMode:'transit'},ship:{label:'🚢 轮船',baiduMode:'driving'},walk:{label:'🚶 步行',baiduMode:'walking'},bike:{label:'🚲 骑行',baiduMode:'riding'},metro:{label:'🚇 地铁',baiduMode:'transit'},moto:{label:'🏍️ 摩托',baiduMode:'driving'},other:{label:'🚀 其他',baiduMode:'driving'}};
 
-document.addEventListener('DOMContentLoaded',()=>{renderTrips();updateStats();});
+document.addEventListener('DOMContentLoaded',()=>{
+  renderTrips();updateStats();
+  // hide auth UI if Firebase not configured
+  if(!FIREBASE_CONFIGURED)document.getElementById('userBar').style.display='none';
+});
 
 // ========== DETAIL MODAL ==========
 function openDetail(type){const titles={trips:'🗺️ 行程明细',places:'📍 到访地点',cost:'💰 花费明细',scenics:'🏔️ 游览景点'};document.getElementById('detailTitle').textContent=titles[type]||'📋 明细';document.getElementById('detailBody').innerHTML=renderDetail(type);document.getElementById('detailModal').classList.add('open');document.body.style.overflow='hidden';}
@@ -289,13 +505,13 @@ function addTag(el,type){const c=type==='via'?el.closest('.form-group').querySel
 // ========== COLLECT / SUBMIT ==========
 function collectFormData(){const days=[];document.querySelectorAll('.day-block').forEach(b=>{const vl=[...b.querySelectorAll('.via-tags .tag-item')].map(t=>t.textContent.replace('×','').trim());const sl=[...b.querySelectorAll('.scenic-tags .tag-item')].map(t=>t.textContent.replace('×','').trim());const dp=b.querySelector('.day-departure').value.trim(),ds=b.querySelector('.day-destination').value.trim();let dist=null;const db=b.querySelector('.distance-bar');if(db&&db.style.display!=='none'){const sm=db.textContent.match(/直线\s*(\d+)\s*km/);const rm=db.textContent.match(/公路\s*(\d+)\s*km/);if(sm)dist={straight:parseInt(sm[1]),road:rm?parseInt(rm[1]):Math.round(parseInt(sm[1])*1.3)};}
 const costs={hotel:parseFloat(b.querySelector('.cost-hotel').value)||0,transport:parseFloat(b.querySelector('.cost-transport').value)||0,food:parseFloat(b.querySelector('.cost-food').value)||0,other:parseFloat(b.querySelector('.cost-other').value)||0};
-days.push({date:b.querySelector('.day-date').value,departure:dp,destination:ds,viaList:vl,scenicList:sl,transport:b.querySelector('.day-transport-select').value,distance:dist,costs,notes:b.querySelector('.day-notes').value.trim()});});return{id:editingId||Date.now(),name:document.getElementById('tripName').value.trim(),startDate:document.getElementById('startDate').value,endDate:document.getElementById('endDate').value,category:document.getElementById('category').value,description:document.getElementById('description').value.trim(),days,createdAt:editingId?(trips.find(t=>t.id===editingId)?.createdAt||new Date().toISOString()):new Date().toISOString()};}
+days.push({date:b.querySelector('.day-date').value,departure:dp,destination:ds,viaList:vl,scenicList:sl,transport:b.querySelector('.day-transport-select').value,distance:dist,costs,notes:b.querySelector('.day-notes').value.trim()});});return{id:editingId||Date.now(),name:document.getElementById('tripName').value.trim(),startDate:document.getElementById('startDate').value,endDate:document.getElementById('endDate').value,category:document.getElementById('category').value,description:document.getElementById('description').value.trim(),days,createdAt:editingId?(trips.find(t=>t.id===editingId)?.createdAt||new Date().toISOString()):new Date().toISOString(),updatedAt:new Date().toISOString()};}
 
-document.getElementById('tripForm').addEventListener('submit',e=>{e.preventDefault();const d=collectFormData();if(editingId){trips[trips.findIndex(t=>t.id===editingId)]=d;showToast('行程更新成功！','success');}else{trips.unshift(d);showToast('行程添加成功！','success');}saveTrips();renderTrips();updateStats();closeFormModal();});
+document.getElementById('tripForm').addEventListener('submit',e=>{e.preventDefault();const d=collectFormData();if(editingId){trips[trips.findIndex(t=>t.id===editingId)]=d;showToast('行程更新成功！','success');}else{trips.unshift(d);showToast('行程添加成功！','success');}saveTrips();saveTripToCloud(d);renderTrips();updateStats();closeFormModal();});
 function cancelEdit(){editingId=null;document.getElementById('editId').value='';document.getElementById('formTitle').textContent='📝 添加行程';document.getElementById('submitBtn').textContent='✨ 添加行程';document.getElementById('cancelBtn').style.display='none';resetForm();}
 function resetForm(){document.getElementById('tripForm').reset();document.getElementById('daysContainer').innerHTML='';dayCounter=0;addDayBlock();}
 function editTrip(id){const trip=trips.find(t=>t.id===id);if(!trip)return;editingId=id;document.getElementById('editId').value=id;document.getElementById('tripName').value=trip.name;document.getElementById('startDate').value=trip.startDate;document.getElementById('endDate').value=trip.endDate||'';document.getElementById('category').value=trip.category;document.getElementById('description').value=trip.description||'';document.getElementById('daysContainer').innerHTML='';dayCounter=0;(trip.days||[]).forEach(d=>addDayBlock(d));if(!(trip.days||[]).length)addDayBlock();document.getElementById('formTitle').textContent='📝 编辑行程';document.getElementById('submitBtn').textContent='💾 保存修改';document.getElementById('cancelBtn').style.display='block';openFormModal();}
-function deleteTrip(id){if(!confirm('确定要删除这条行程吗？'))return;trips=trips.filter(t=>t.id!==id);saveTrips();renderTrips();updateStats();showToast('行程已删除','success');if(editingId===id)cancelEdit();}
+function deleteTrip(id){if(!confirm('确定要删除这条行程吗？'))return;trips=trips.filter(t=>t.id!==id);saveTrips();deleteTripFromCloud(id);renderTrips();updateStats();showToast('行程已删除','success');if(editingId===id)cancelEdit();}
 
 // ========== RENDER ==========
 function renderTrips(searchTerm=''){const term=searchTerm.toLowerCase();const filtered=trips.filter(t=>{if(!term)return true;if(t.name.toLowerCase().includes(term))return true;const l=(t.days||[]).flatMap(d=>[d.departure,d.destination,...(d.viaList||[]),...(d.scenicList||[])]).join(' ');return l.toLowerCase().includes(term);});document.getElementById('tripCount').textContent=filtered.length;document.getElementById('tripCountCard').textContent=filtered.length;if(!filtered.length){document.getElementById('tripsList').innerHTML=`<div class="empty-state"><div class="icon">${term?'🔍':'🌍'}</div><h3>${term?'没有找到匹配的行程':'还没有行程记录'}</h3><p>${term?'试试其他关键词':'点击上方卡片添加你的第一段旅程吧！'}</p></div>`;return;}
@@ -322,9 +538,18 @@ function updateStats(){document.getElementById('totalTrips').textContent=trips.l
 
 // ========== UTILS ==========
 document.getElementById('searchInput').addEventListener('input',e=>renderTrips(e.target.value));
-function saveTrips(){localStorage.setItem('justiceTrips2',JSON.stringify(trips));}
+function saveTripsLocal(){localStorage.setItem('justiceTrips2',JSON.stringify(trips));}
+function saveTrips(){
+  localStorage.setItem('justiceTrips2',JSON.stringify(trips));
+  // cloud sync if logged in
+  if(currentUser&&fbDb&&!isSyncing){
+    // save the latest changed trip to cloud
+    // (full sync: save all trips)
+    trips.forEach(t=>saveTripToCloud(t));
+  }
+}
 function exportData(){if(!trips.length){showToast('没有数据可导出','error');return;}const b=new Blob([JSON.stringify(trips,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`正义之旅_${new Date().toISOString().split('T')[0]}.json`;a.click();URL.revokeObjectURL(a.href);showToast('数据导出成功！','success');}
-function importData(event){const f=event.target.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{try{const d=JSON.parse(e.target.result);if(Array.isArray(d)){d.forEach(t=>(t.days||[]).forEach(dd=>{if(!dd.costs)dd.costs=normCosts(dd);}));trips=d.concat(trips);saveTrips();renderTrips();updateStats();showToast(`成功导入 ${d.length} 条行程！`,'success');}else showToast('文件格式不正确','error');}catch{showToast('文件解析失败','error');}};r.readAsText(f);event.target.value='';}
+function importData(event){const f=event.target.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{try{const d=JSON.parse(e.target.result);if(Array.isArray(d)){d.forEach(t=>{t.updatedAt=new Date().toISOString();(t.days||[]).forEach(dd=>{if(!dd.costs)dd.costs=normCosts(dd);});});trips=d.concat(trips);saveTrips();if(currentUser)d.forEach(t=>saveTripToCloud(t));renderTrips();updateStats();showToast(`成功导入 ${d.length} 条行程！`,'success');}else showToast('文件格式不正确','error');}catch{showToast('文件解析失败','error');}};r.readAsText(f);event.target.value='';}
 function formatDate(s){if(!s)return'';const d=new Date(s);return`${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()}`;}
 function escapeHtml(t){if(!t)return'';const d=document.createElement('div');d.textContent=t;return d.innerHTML;}
 function showToast(m,t='success'){const e=document.getElementById('toast');e.textContent=m;e.className=`toast ${t} show`;setTimeout(()=>e.classList.remove('show'),3000);}
