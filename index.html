@@ -585,7 +585,7 @@ function closeCalcModal(){document.getElementById('calcModal').classList.remove(
 function calcPress(v){
   const d=document.getElementById('calcDisplay');
   if(v==='C'){d.value='';document.getElementById('calcResult').textContent='';return;}
-  if(v==='='){try{const r=eval(d.value);d.value=r;document.getElementById('calcResult').textContent='= '+r;}catch{e}d.value='';document.getElementById('calcResult').textContent='';return;}
+  if(v==='='){try{const r=eval(d.value);document.getElementById('calcResult').textContent='= '+r;d.value=r;}catch(e){document.getElementById('calcResult').textContent='错误';}return;}
   if(v==='Enter'){
     const r=parseFloat(document.getElementById('calcDisplay').value)||0;
     if(calcTargetInput){
