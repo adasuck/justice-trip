@@ -486,10 +486,21 @@ function openBaiduNav(fc,tc,fn,tn,tm){if(!fn||!tn){showToast('请先填写出发
 
 // ========== DAY BLOCK ==========
 function addDayBlock(data=null){dayCounter++;const dn=dayCounter,ct=document.getElementById('daysContainer'),bl=document.createElement('div');bl.className='day-block';bl.id=`day-block-${dn}`;const dv=data||{},di=document.querySelectorAll('.day-block').length+1;
+// auto-fill date: find max date from existing days, add 1 day
+let autoDate='';
+if(!dv.date){
+  const allDates=[];
+  document.querySelectorAll('.day-block .day-date').forEach(inp=>{if(inp.value)allDates.push(inp.value);});
+  if(allDates.length){
+    const maxDate=allDates.sort().reverse()[0];
+    const d=new Date(maxDate);d.setDate(d.getDate()+1);
+    autoDate=d.toISOString().split('T')[0];
+  }
+}
 const cs=dv.costs||normCosts(dv);
 bl.innerHTML=`
 <div class="day-number"><span>🗓️ 第 ${di} 天</span><button type="button" class="btn-small btn-remove-day" onclick="removeDayBlock(${dn})">✕ 移除</button></div>
-<div class="form-row"><div class="form-group"><label>日期</label><input type="date" class="day-date" value="${dv.date||''}"></div><div class="form-group"><label>交通工具</label><select class="day-transport-select" style="width:100%;padding:10px 14px;border:2px solid #ddd6fe;border-radius:10px;font-size:0.95rem;font-family:inherit;">${Object.entries(TRANSPORT_MODES).map(([k,v])=>`<option value="${k}" ${k===(dv.transport||'car')?'selected':''}>${v.label}</option>`).join('')}</select></div></div>
+<div class="form-row"><div class="form-group"><label>日期</label><input type="date" class="day-date" value="${dv.date||autoDate}"></div><div class="form-group"><label>交通工具</label><select class="day-transport-select" style="width:100%;padding:10px 14px;border:2px solid #ddd6fe;border-radius:10px;font-size:0.95rem;font-family:inherit;">${Object.entries(TRANSPORT_MODES).map(([k,v])=>`<option value="${k}" ${k===(dv.transport||'car')?'selected':''}>${v.label}</option>`).join('')}</select></div></div>
 <div class="form-row"><div class="form-group"><label>🚩 出发地</label><input type="text" class="day-departure" value="${escapeHtml(dv.departure||'')}" placeholder="例如：昆明"></div><div class="form-group"><label>🏁 目的地</label><input type="text" class="day-destination" value="${escapeHtml(dv.destination||'')}" placeholder="例如：大理"></div></div>
 <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;"><button type="button" class="btn-small btn-calc" onclick="calcDayDistance(${dn})">📏 计算距离</button><button type="button" class="btn-small btn-nav" onclick="navigateDay(${dn})" style="display:${dv.distance?'inline-block':'none'};" id="nav-btn-${dn}">🧭 导航</button></div>
 <div class="distance-bar" id="dist-bar-${dn}" style="display:${dv.distance?'flex':'none'};">${dv.distance?`<span>📏</span><span>直线 <span class="dist-value">${dv.distance.straight}km</span></span><span style="color:#64748b;">|</span><span>约公路 <span class="road-dist" style="font-weight:600;color:#059669;">${dv.distance.road}km</span></span>`:''}</div>
