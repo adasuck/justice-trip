@@ -311,6 +311,7 @@ async function handleAuth(mode){
     };
     errEl.textContent=msgs[e.code]||e.message;
     errEl.style.display='block';
+    alert('Login error: ' + (e.message || e.code));
   }
 }
 
