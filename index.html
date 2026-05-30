@@ -311,12 +311,11 @@ async function handleAuth(mode){
 function handleLogout(){
   if(!fbAuth)return;
   fbAuth.signOut();
-  // 退出后从 localStorage 恢复数据并重新渲染
-  trips = JSON.parse(localStorage.getItem('justiceTrips2'))||[];
-  trips.forEach(t=>(t.days||[]).forEach(d=>{if(!d.costs)d.costs=normCosts(d);}));
+  // 退出后清空页面数据
+  trips = [];
   renderTrips();
   updateStats();
-  showToast('已退出登录，数据已恢复本地','success');
+  showToast('已退出登录','success');
 }
 
 function updateAuthUI(){
@@ -421,6 +420,10 @@ let geoCache=JSON.parse(localStorage.getItem('justiceGeoCache'))||{};
 const TRANSPORT_MODES={car:{label:'🚗 自驾',baiduMode:'driving'},train:{label:'🚄 火车/高铁',baiduMode:'transit'},plane:{label:'✈️ 飞机',baiduMode:'driving'},bus:{label:'🚌 大巴',baiduMode:'transit'},ship:{label:'🚢 轮船',baiduMode:'driving'},walk:{label:'🚶 步行',baiduMode:'walking'},bike:{label:'🚲 骑行',baiduMode:'riding'},metro:{label:'🚇 地铁',baiduMode:'transit'},moto:{label:'🏍️ 摩托',baiduMode:'driving'},other:{label:'🚀 其他',baiduMode:'driving'}};
 
 document.addEventListener('DOMContentLoaded',()=>{
+  // 如果配置了 Firebase 且未登录，清空本地数据（强制登录后才能查看）
+  if(FIREBASE_CONFIGURED && !currentUser){
+    trips = [];
+  }
   renderTrips();updateStats();
   // hide auth UI if Firebase not configured
   if(!FIREBASE_CONFIGURED)document.getElementById('userBar').style.display='none';
@@ -462,7 +465,14 @@ return'<div class="detail-empty"><div class="icon">📭</div><p>暂无数据</p>
 
 // ========== MODALS ==========
 function scrollToTrips(){document.getElementById('tripsPanel').scrollIntoView({behavior:'smooth'});}
-function openFormModal(){document.getElementById('formModal').classList.add('open');document.body.style.overflow='hidden';if(!editingId)resetForm();}
+function openFormModal(){
+  if(FIREBASE_CONFIGURED && !currentUser){
+    showToast('请先登录账号后再录入行程','error');
+    openAuthModal();
+    return;
+  }
+  document.getElementById('formModal').classList.add('open');document.body.style.overflow='hidden';if(!editingId)resetForm();
+}
 function closeFormModal(){document.getElementById('formModal').classList.remove('open');document.body.style.overflow='';editingId=null;document.getElementById('editId').value='';document.getElementById('formTitle').textContent='📝 添加行程';document.getElementById('submitBtn').textContent='✨ 添加行程';document.getElementById('cancelBtn').style.display='none';resetForm();}
 
 // ========== GEO / NAV ==========
