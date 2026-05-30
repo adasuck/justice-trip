@@ -495,11 +495,11 @@ bl.innerHTML=`
 <div class="distance-bar" id="dist-bar-${dn}" style="display:${dv.distance?'flex':'none'};">${dv.distance?`<span>📏</span><span>直线 <span class="dist-value">${dv.distance.straight}km</span></span><span style="color:#64748b;">|</span><span>约公路 <span class="road-dist" style="font-weight:600;color:#059669;">${dv.distance.road}km</span></span>`:''}</div>
 <div class="form-group"><label>🛤️ 途径地</label><div class="tag-input-row"><input type="text" class="via-input" placeholder="输入途径地，回车添加"><button type="button" onclick="addTag(this,'via')">添加</button></div><div class="tags-container via-tags">${(dv.viaList||[]).map(v=>`<span class="tag-item via">${escapeHtml(v)}<span class="remove-tag" onclick="this.parentElement.remove()">×</span></span>`).join('')}</div></div>
 <div class="form-group"><label>🏔️ 沿途景点</label><div class="tag-input-row"><input type="text" class="scenic-input" placeholder="输入景点名称，回车添加"><button type="button" onclick="addTag(this,'scenic')">添加</button></div><div class="tags-container scenic-tags">${(dv.scenicList||[]).map(s=>`<span class="tag-item scenic">${escapeHtml(s)}<span class="remove-tag" onclick="this.parentElement.remove()">×</span></span>`).join('')}</div></div>
-<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 14px;margin-bottom:14px;"><label style="display:block;margin-bottom:8px;font-weight:600;color:#059669;font-size:0.95rem;">💰 当日花费</label><div class="form-row-4">
-<div class="form-group" style="margin-bottom:0"><label style="color:#6366f1;font-size:0.82rem;">🏨 住宿</label><input type="number" class="cost-hotel cost-input-hotel" value="${cs.hotel||''}" min="0" step="0.01" placeholder="0"></div>
-<div class="form-group" style="margin-bottom:0"><label style="color:#d97706;font-size:0.82rem;">🚗 交通</label><input type="number" class="cost-transport cost-input-transport" value="${cs.transport||''}" min="0" step="0.01" placeholder="0"></div>
-<div class="form-group" style="margin-bottom:0"><label style="color:#dc2626;font-size:0.82rem;">🍽️ 餐饮</label><input type="number" class="cost-food cost-input-food" value="${cs.food||''}" min="0" step="0.01" placeholder="0"></div>
-<div class="form-group" style="margin-bottom:0"><label style="color:#4b5563;font-size:0.82rem;">📦 其他</label><input type="number" class="cost-other cost-input-other" value="${cs.other||''}" min="0" step="0.01" placeholder="0"></div>
+<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 14px;margin-bottom:14px;"><label style="display:block;margin-bottom:8px;font-weight:600;color:#059669;font-size:0.95rem;">💰 当日花费 <button type="button" class="btn-small" style="background:#6366f1;color:white;padding:3px 10px;font-size:0.75rem;border-radius:12px;margin-left:8px;" onclick="openCalc(${dn})">🧮 计算器</button></label><div class="form-row-4">
+<div class="form-group" style="margin-bottom:0"><label style="color:#6366f1;font-size:0.82rem;">🏨 住宿</label><div style="display:flex;gap:4px;align-items:center;"><input type="number" class="cost-hotel cost-input-hotel" value="${cs.hotel||''}" min="0" step="0.01" placeholder="0" style="flex:1;min-width:0"><button type="button" class="btn-small" style="padding:2px 8px;font-size:0.7rem;background:#eef2ff;color:#6366f1;border-radius:6px;" onclick="openCalc(${dn},'hotel')">🧮</button></div></div>
+<div class="form-group" style="margin-bottom:0"><label style="color:#d97706;font-size:0.82rem;">🚗 交通</label><div style="display:flex;gap:4px;align-items:center;"><input type="number" class="cost-transport cost-input-transport" value="${cs.transport||''}" min="0" step="0.01" placeholder="0" style="flex:1;min-width:0"><button type="button" class="btn-small" style="padding:2px 8px;font-size:0.7rem;background:#fffbeb;color:#d97706;border-radius:6px;" onclick="openCalc(${dn},'transport')">🧮</button></div></div>
+<div class="form-group" style="margin-bottom:0"><label style="color:#dc2626;font-size:0.82rem;">🍽️ 餐饮</label><div style="display:flex;gap:4px;align-items:center;"><input type="number" class="cost-food cost-input-food" value="${cs.food||''}" min="0" step="0.01" placeholder="0" style="flex:1;min-width:0"><button type="button" class="btn-small" style="padding:2px 8px;font-size:0.7rem;background:#fef2f2;color:#dc2626;border-radius:6px;" onclick="openCalc(${dn},'food')">🧮</button></div></div>
+<div class="form-group" style="margin-bottom:0"><label style="color:#4b5563;font-size:0.82rem;">📦 其他</label><div style="display:flex;gap:4px;align-items:center;"><input type="number" class="cost-other cost-input-other" value="${cs.other||''}" min="0" step="0.01" placeholder="0" style="flex:1;min-width:0"><button type="button" class="btn-small" style="padding:2px 8px;font-size:0.7rem;background:#f3f4f6;color:#4b5563;border-radius:6px;" onclick="openCalc(${dn},'other')">🧮</button></div></div>
 </div><div class="day-cost-total" id="day-total-${dn}">合计：¥0</div></div>
 <div class="form-group"><label>📝 当日备注</label><input type="text" class="day-notes" value="${escapeHtml(dv.notes||'')}" placeholder="简短备注..."></div>`;
 ct.appendChild(bl);
@@ -568,6 +568,47 @@ function importData(event){const f=event.target.files[0];if(!f)return;const r=ne
 function formatDate(s){if(!s)return'';const d=new Date(s);return`${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()}`;}
 function escapeHtml(t){if(!t)return'';const d=document.createElement('div');d.textContent=t;return d.innerHTML;}
 function showToast(m,t='success'){const e=document.getElementById('toast');e.textContent=m;e.className=`toast ${t} show`;setTimeout(()=>e.classList.remove('show'),3000);}
+
+// ========== CALCULATOR ==========
+let calcTargetInput=null;
+function openCalc(dn,field){
+  calcTargetInput=null;
+  document.getElementById('calcModal').classList.add('open');
+  document.getElementById('calcDisplay').value='';
+  document.getElementById('calcResult').textContent='';
+  document.body.style.overflow='hidden';
+  if(dn!==undefined && field){
+    calcTargetInput={dn,field};
+  }
+}
+function closeCalcModal(){document.getElementById('calcModal').classList.remove('open');document.body.style.overflow='';}
+function calcPress(v){
+  const d=document.getElementById('calcDisplay');
+  if(v==='C'){d.value='';document.getElementById('calcResult').textContent='';return;}
+  if(v==='='){try{const r=eval(d.value);d.value=r;document.getElementById('calcResult').textContent='= '+r;}catch{e}d.value='';document.getElementById('calcResult').textContent='';return;}
+  if(v==='Enter'){
+    const r=parseFloat(document.getElementById('calcDisplay').value)||0;
+    if(calcTargetInput){
+      const bl=document.getElementById(`day-block-${calcTargetInput.dn}`);
+      if(bl){bl.querySelector(`.cost-${calcTargetInput.field}`).value=r;updateDayTotal(calcTargetInput.dn);}
+    }
+    closeCalcModal();return;
+  }
+  d.value+=v;
+}
 </script>
+<!-- Calculator Modal -->
+<div class="modal-overlay" id="calcModal" style="z-index:1200;"><div style="max-width:320px;margin:40px auto;"><div class="modal-header"><h2>🧮 计算器</h2><button class="modal-close" onclick="closeCalcModal()">✕</button></div><div class="modal-body" style="padding:20px;">
+  <input id="calcDisplay" type="text" readonly style="width:100%;padding:12px 14px;font-size:1.4rem;font-weight:600;text-align:right;border:2px solid #e0e0e0;border-radius:10px;margin-bottom:8px;font-family:inherit;background:#f8f9fa;" placeholder="0">
+  <div id="calcResult" style="text-align:right;color:#888;font-size:0.85rem;margin-bottom:12px;min-height:20px;"></div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+    <button class="calc-btn" onclick="calcPress('7')">7</button><button class="calc-btn" onclick="calcPress('8')">8</button><button class="calc-btn" onclick="calcPress('9')">9</button><button class="calc-btn op" onclick="calcPress('/')">÷</button>
+    <button class="calc-btn" onclick="calcPress('4')">4</button><button class="calc-btn" onclick="calcPress('5')">5</button><button class="calc-btn" onclick="calcPress('6')">6</button><button class="calc-btn op" onclick="calcPress('*')">×</button>
+    <button class="calc-btn" onclick="calcPress('1')">1</button><button class="calc-btn" onclick="calcPress('2')">2</button><button class="calc-btn" onclick="calcPress('3')">3</button><button class="calc-btn op" onclick="calcPress('-')">−</button>
+    <button class="calc-btn" onclick="calcPress('0')">0</button><button class="calc-btn" onclick="calcPress('.')">.</button><button class="calc-btn eq" onclick="calcPress('Enter')">✅</button><button class="calc-btn op" onclick="calcPress('+')">+</button>
+    <button class="calc-btn clr" onclick="calcPress('C')" style="grid-column:span 2;">C</button><button class="calc-btn op" onclick="calcPress('=')">=</button>
+  </div>
+  <style>.calc-btn{padding:14px;border:2px solid #e0e0e0;border-radius:10px;font-size:1.1rem;font-weight:600;cursor:pointer;background:white;transition:all 0.15s;font-family:inherit;}.calc-btn:active{transform:scale(0.95);}.calc-btn.op{background:#f0f4ff;color:#667eea;border-color:#c7d2fe;}.calc-btn.eq{background:#059669;color:white;border-color:#059669;}.calc-btn.clr{background:#fee2e2;color:#ef4444;border-color:#fecaca;}</style>
+</div></div></div>
 </body>
 </html>
