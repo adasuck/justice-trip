@@ -485,16 +485,18 @@ function _tLon(x,y){let r=300+x+2*y+.1*x*x+.1*x*y+.1*Math.sqrt(Math.abs(x));r+=(
 function openBaiduNav(fc,tc,fn,tn,tm){if(!fn||!tn){showToast('请先填写出发地和目的地','error');return;}const m=TRANSPORT_MODES[tm]?.baiduMode||'driving';let au,wu;if(fc&&tc){const f=wgs84ToGcj02(fc.lat,fc.lon),t=wgs84ToGcj02(tc.lat,tc.lon);au=`baidumap://map/direction?origin=${encodeURIComponent(fn)}|latlng:${f.lat.toFixed(6)},${f.lon.toFixed(6)}&destination=${encodeURIComponent(tn)}|latlng:${t.lat.toFixed(6)},${t.lon.toFixed(6)}&mode=${m}&coord_type=gcj02&src=webapp.baidu.openAPIdemo`;wu=`https://api.map.baidu.com/direction?origin=${encodeURIComponent(fn)}|latlng:${f.lat.toFixed(6)},${f.lon.toFixed(6)}&destination=${encodeURIComponent(tn)}|latlng:${t.lat.toFixed(6)},${t.lon.toFixed(6)}&mode=${m}&coord_type=gcj02&output=html&src=正义之旅`;}else{au=`baidumap://map/direction?origin=${encodeURIComponent(fn)}&destination=${encodeURIComponent(tn)}&mode=${m}&src=webapp.baidu.openAPIdemo`;wu=`https://api.map.baidu.com/direction?origin=${encodeURIComponent(fn)}&destination=${encodeURIComponent(tn)}&mode=${m}&output=html&src=正义之旅`;}let o=false;const h=()=>{if(document.hidden)o=true;};document.addEventListener('visibilitychange',h);window.location.href=au;setTimeout(()=>{document.removeEventListener('visibilitychange',h);if(!o)window.open(wu,'_blank');},1500);}
 
 // ========== DAY BLOCK ==========
-function addDayBlock(data=null){dayCounter++;const dn=dayCounter,ct=document.getElementById('daysContainer'),bl=document.createElement('div');bl.className='day-block';bl.id=`day-block-${dn}`;const dv=data||{},di=document.querySelectorAll('.day-block').length+1;
-// auto-fill date: find max date from existing days, add 1 day
+function addDayBlock(data=null){dayCounter++;const dn=dayCounter,ct=document.getElementById('daysContainer'),bl=document.createElement('div');bl.className='day-block';bl.id=`day-block-${dn}`;const dv=data||{},di=ct.querySelectorAll('.day-block').length+1;
+// auto-fill date: find last day's date in container, add 1 day
 let autoDate='';
 if(!dv.date){
-  const allDates=[];
-  document.querySelectorAll('.day-block .day-date').forEach(inp=>{if(inp.value)allDates.push(inp.value);});
-  if(allDates.length){
-    const maxDate=allDates.sort().reverse()[0];
-    const d=new Date(maxDate);d.setDate(d.getDate()+1);
-    autoDate=d.toISOString().split('T')[0];
+  const blocks=ct.querySelectorAll('.day-block');
+  if(blocks.length){
+    const lastBlock=blocks[blocks.length-1];
+    const lastDateInput=lastBlock.querySelector('.day-date');
+    if(lastDateInput && lastDateInput.value){
+      const d=new Date(lastDateInput.value);d.setDate(d.getDate()+1);
+      autoDate=d.toISOString().split('T')[0];
+    }
   }
 }
 const cs=dv.costs||normCosts(dv);
