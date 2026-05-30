@@ -311,7 +311,12 @@ async function handleAuth(mode){
 function handleLogout(){
   if(!fbAuth)return;
   fbAuth.signOut();
-  showToast('已退出登录','success');
+  // 退出后从 localStorage 恢复数据并重新渲染
+  trips = JSON.parse(localStorage.getItem('justiceTrips2'))||[];
+  trips.forEach(t=>(t.days||[]).forEach(d=>{if(!d.costs)d.costs=normCosts(d);}));
+  renderTrips();
+  updateStats();
+  showToast('已退出登录，数据已恢复本地','success');
 }
 
 function updateAuthUI(){
