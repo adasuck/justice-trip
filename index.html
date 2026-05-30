@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>正义之旅 - 旅行记事本</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         *{margin:0;padding:0;box-sizing:border-box}
         body{font-family:'Noto Sans SC',sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;padding:20px}
@@ -565,7 +566,7 @@ ${(d.scenicList||[]).length>0?`<div style="margin-top:6px;">${d.scenicList.map(s
 ${dc>0?`<div class="cost-tags"><span class="cost-tag cost-tag-total" style="background:#ecfdf5;color:#059669;font-weight:600;">💰 ¥${dc.toLocaleString()}</span>${COST_KEYS.map(k=>c[k]>0?`<span class="cost-tag cost-tag-${k}">${COST_LABELS[k]} ¥${c[k].toLocaleString()}</span>`:'').join('')}</div>`:''}
 ${d.departure&&d.destination?`<div style="margin-top:6px;"><button type="button" class="nav-link" onclick="openBaiduNav(${fc?JSON.stringify(fc):'null'},${tc2?JSON.stringify(tc2):'null'},'${escapeHtml(d.departure).replace(/'/g,"\\'")}','${escapeHtml(d.destination).replace(/'/g,"\\'")}','${d.transport||'car'}')">🧭 百度地图导航</button></div>`:''}
 ${d.notes?`<div class="day-notes">${escapeHtml(d.notes)}</div>`:''}</div>`;}).join('')}</div>`:''}
-<div class="trip-actions"><button class="btn-small btn-expand" onclick="toggleDays(${trip.id})">📋 展开每日</button><button class="btn-small btn-edit" onclick="editTrip(${trip.id})">✏️ 编辑</button><button class="btn-small btn-delete" onclick="deleteTrip(${trip.id})">🗑️ 删除</button></div></div>`;}).join('');}
+<div class="trip-actions"><button class="btn-small btn-expand" onclick="toggleDays(${trip.id})">📋 展开每日</button><button class="btn-small btn-edit" onclick="editTrip(${trip.id})">✏️ 编辑</button><button class="btn-small btn-delete" onclick="deleteTrip(${trip.id})">🗑️ 删除</button><button class="btn-small" style="background:#dbeafe;color:#1d4ed8;" onclick="exportTripPDF(${trip.id})">📄 导出PDF</button></div></div>`;}).join('');}
 
 function toggleDays(id){const e=document.getElementById(`days-${id}`);if(e){e.classList.toggle('days-expanded');e.classList.toggle('days-collapsed');}}
 
@@ -589,6 +590,99 @@ function importData(event){const f=event.target.files[0];if(!f)return;const r=ne
 function formatDate(s){if(!s)return'';const d=new Date(s);return`${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()}`;}
 function escapeHtml(t){if(!t)return'';const d=document.createElement('div');d.textContent=t;return d.innerHTML;}
 function showToast(m,t='success'){const e=document.getElementById('toast');e.textContent=m;e.className=`toast ${t} show`;setTimeout(()=>e.classList.remove('show'),3000);}
+
+// ========== EXPORT PDF ==========
+function exportTripPDF(tripId){
+  const trip = trips.find(t => t.id === tripId);
+  if(!trip){showToast('行程不存在','error');return;}
+  
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  
+  // 标题
+  doc.setFontSize(20);
+  doc.text(trip.name, 20, 20);
+  
+  // 基本信息
+  doc.setFontSize(12);
+  let y = 35;
+  doc.text(`出发日期: ${trip.startDate || '未设置'}`, 20, y);
+  y += 8;
+  doc.text(`结束日期: ${trip.endDate || '未设置'}`, 20, y);
+  y += 8;
+  doc.text(`类别: ${trip.category}`, 20, y);
+  y += 8;
+  const totalCost = tripCostTotal(trip);
+  doc.text(`总花费: ¥${totalCost.toLocaleString()}`, 20, y);
+  y += 15;
+  
+  // 每日行程表格
+  doc.setFontSize(14);
+  doc.text('每日行程', 20, y);
+  y += 10;
+  
+  if(trip.days && trip.days.length > 0){
+    trip.days.forEach((day, index) => {
+      if(y > 250) { doc.addPage(); y = 20; }
+      
+      doc.setFontSize(11);
+      doc.text(`第${index + 1}天 ${day.date ? formatDate(day.date) : ''}`, 20, y);
+      y += 7;
+      
+      doc.setFontSize(9);
+      const route = `${day.departure || ''} → ${day.destination || ''}`;
+      doc.text(`路线: ${route}`, 25, y);
+      y += 5;
+      
+      const transport = TRANSPORT_MODES[day.transport]?.label || '自驾';
+      doc.text(`交通: ${transport}`, 25, y);
+      y += 5;
+      
+      if(day.distance){
+        doc.text(`距离: 直线${day.distance.straight}km / 约${day.distance.road}km`, 25, y);
+        y += 5;
+      }
+      
+      const dayCost = dayCostTotal(day);
+      if(dayCost > 0){
+        doc.text(`花费: ¥${dayCost.toLocaleString()}`, 25, y);
+        y += 5;
+      }
+      
+      y += 5;
+    });
+  }
+  
+  // 花费汇总
+  if(y > 250) { doc.addPage(); y = 20; }
+  y += 10;
+  doc.setFontSize(14);
+  doc.text('花费汇总', 20, y);
+  y += 10;
+  
+  const agg = {hotel:0, transport:0, food:0, other:0};
+  (trip.days || []).forEach(d => {
+    const c = normCosts(d);
+    COST_KEYS.forEach(k => agg[k] += (c[k] || 0));
+  });
+  
+  doc.setFontSize(10);
+  doc.text(`🏨 住宿: ¥${agg.hotel.toLocaleString()}`, 25, y);
+  y += 7;
+  doc.text(`🚗 交通: ¥${agg.transport.toLocaleString()}`, 25, y);
+  y += 7;
+  doc.text(`🍽️ 餐饮: ¥${agg.food.toLocaleString()}`, 25, y);
+  y += 7;
+  doc.text(`📦 其他: ¥${agg.other.toLocaleString()}`, 25, y);
+  y += 7;
+  doc.setFontSize(12);
+  doc.text(`总计: ¥${totalCost.toLocaleString()}`, 25, y);
+  
+  // 下载
+  const fileName = `${trip.name.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '_')}_行程.pdf`;
+  doc.save(fileName);
+  showToast('PDF导出成功！','success');
+}
 
 // ========== CALCULATOR ==========
 let calcTargetInput=null;
