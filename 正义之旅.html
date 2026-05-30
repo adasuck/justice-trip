@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>正义之旅 - 旅行记事本</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         *{margin:0;padding:0;box-sizing:border-box}
         body{font-family:'Noto Sans SC',sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;padding:20px}
@@ -225,12 +226,12 @@
 // ========== FIREBASE CONFIG ==========
 // ⚠️ 请替换为你的 Firebase 项目配置
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyDt7X9aCjLE733nCR0AR-PzkKoEpohpqLs",
+  authDomain: "justice-trip.firebaseapp.com",
+  projectId: "justice-trip",
+  storageBucket: "justice-trip.firebasestorage.app",
+  messagingSenderId: "772815343697",
+  appId: "1:772815343697:web:c20f0224321e990682a870"
 };
 
 let fbApp=null, fbAuth=null, fbDb=null, currentUser=null, isSyncing=false;
@@ -311,6 +312,10 @@ async function handleAuth(mode){
 function handleLogout(){
   if(!fbAuth)return;
   fbAuth.signOut();
+  // 退出后清空页面数据
+  trips = [];
+  renderTrips();
+  updateStats();
   showToast('已退出登录','success');
 }
 
@@ -416,6 +421,10 @@ let geoCache=JSON.parse(localStorage.getItem('justiceGeoCache'))||{};
 const TRANSPORT_MODES={car:{label:'🚗 自驾',baiduMode:'driving'},train:{label:'🚄 火车/高铁',baiduMode:'transit'},plane:{label:'✈️ 飞机',baiduMode:'driving'},bus:{label:'🚌 大巴',baiduMode:'transit'},ship:{label:'🚢 轮船',baiduMode:'driving'},walk:{label:'🚶 步行',baiduMode:'walking'},bike:{label:'🚲 骑行',baiduMode:'riding'},metro:{label:'🚇 地铁',baiduMode:'transit'},moto:{label:'🏍️ 摩托',baiduMode:'driving'},other:{label:'🚀 其他',baiduMode:'driving'}};
 
 document.addEventListener('DOMContentLoaded',()=>{
+  // 如果配置了 Firebase 且未登录，清空本地数据（强制登录后才能查看）
+  if(FIREBASE_CONFIGURED && !currentUser){
+    trips = [];
+  }
   renderTrips();updateStats();
   // hide auth UI if Firebase not configured
   if(!FIREBASE_CONFIGURED)document.getElementById('userBar').style.display='none';
@@ -457,7 +466,14 @@ return'<div class="detail-empty"><div class="icon">📭</div><p>暂无数据</p>
 
 // ========== MODALS ==========
 function scrollToTrips(){document.getElementById('tripsPanel').scrollIntoView({behavior:'smooth'});}
-function openFormModal(){document.getElementById('formModal').classList.add('open');document.body.style.overflow='hidden';if(!editingId)resetForm();}
+function openFormModal(){
+  if(FIREBASE_CONFIGURED && !currentUser){
+    showToast('请先登录账号后再录入行程','error');
+    openAuthModal();
+    return;
+  }
+  document.getElementById('formModal').classList.add('open');document.body.style.overflow='hidden';if(!editingId)resetForm();
+}
 function closeFormModal(){document.getElementById('formModal').classList.remove('open');document.body.style.overflow='';editingId=null;document.getElementById('editId').value='';document.getElementById('formTitle').textContent='📝 添加行程';document.getElementById('submitBtn').textContent='✨ 添加行程';document.getElementById('cancelBtn').style.display='none';resetForm();}
 
 // ========== GEO / NAV ==========
@@ -470,21 +486,42 @@ function _tLon(x,y){let r=300+x+2*y+.1*x*x+.1*x*y+.1*Math.sqrt(Math.abs(x));r+=(
 function openBaiduNav(fc,tc,fn,tn,tm){if(!fn||!tn){showToast('请先填写出发地和目的地','error');return;}const m=TRANSPORT_MODES[tm]?.baiduMode||'driving';let au,wu;if(fc&&tc){const f=wgs84ToGcj02(fc.lat,fc.lon),t=wgs84ToGcj02(tc.lat,tc.lon);au=`baidumap://map/direction?origin=${encodeURIComponent(fn)}|latlng:${f.lat.toFixed(6)},${f.lon.toFixed(6)}&destination=${encodeURIComponent(tn)}|latlng:${t.lat.toFixed(6)},${t.lon.toFixed(6)}&mode=${m}&coord_type=gcj02&src=webapp.baidu.openAPIdemo`;wu=`https://api.map.baidu.com/direction?origin=${encodeURIComponent(fn)}|latlng:${f.lat.toFixed(6)},${f.lon.toFixed(6)}&destination=${encodeURIComponent(tn)}|latlng:${t.lat.toFixed(6)},${t.lon.toFixed(6)}&mode=${m}&coord_type=gcj02&output=html&src=正义之旅`;}else{au=`baidumap://map/direction?origin=${encodeURIComponent(fn)}&destination=${encodeURIComponent(tn)}&mode=${m}&src=webapp.baidu.openAPIdemo`;wu=`https://api.map.baidu.com/direction?origin=${encodeURIComponent(fn)}&destination=${encodeURIComponent(tn)}&mode=${m}&output=html&src=正义之旅`;}let o=false;const h=()=>{if(document.hidden)o=true;};document.addEventListener('visibilitychange',h);window.location.href=au;setTimeout(()=>{document.removeEventListener('visibilitychange',h);if(!o)window.open(wu,'_blank');},1500);}
 
 // ========== DAY BLOCK ==========
-function addDayBlock(data=null){dayCounter++;const dn=dayCounter,ct=document.getElementById('daysContainer'),bl=document.createElement('div');bl.className='day-block';bl.id=`day-block-${dn}`;const dv=data||{},di=document.querySelectorAll('.day-block').length+1;
+function addDayBlock(data=null){dayCounter++;const dn=dayCounter,ct=document.getElementById('daysContainer'),bl=document.createElement('div');bl.className='day-block';bl.id=`day-block-${dn}`;const dv=data||{},di=ct.querySelectorAll('.day-block').length+1;
+// auto-fill: find last day's data
+let autoDate='',autoDeparture='',autoTransport='car';
+if(!dv.date){
+  const blocks=ct.querySelectorAll('.day-block');
+  if(blocks.length){
+    const lastBlock=blocks[blocks.length-1];
+    // auto date
+    const lastDateInput=lastBlock.querySelector('.day-date');
+    if(lastDateInput && lastDateInput.value){
+      const d=new Date(lastDateInput.value);d.setDate(d.getDate()+1);
+      autoDate=d.toISOString().split('T')[0];
+    }
+    // auto transport: use last day's transport
+    const lastTransport=lastBlock.querySelector('.day-transport-select');
+    if(lastTransport)autoTransport=lastTransport.value;
+    // auto departure: use last day's destination
+    const lastDestination=lastBlock.querySelector('.day-destination');
+    if(lastDestination && lastDestination.value)autoDeparture=lastDestination.value;
+  }
+}
+const useDate=dv.date||autoDate, useTransport=dv.transport||autoTransport, useDeparture=dv.departure||autoDeparture;
 const cs=dv.costs||normCosts(dv);
 bl.innerHTML=`
 <div class="day-number"><span>🗓️ 第 ${di} 天</span><button type="button" class="btn-small btn-remove-day" onclick="removeDayBlock(${dn})">✕ 移除</button></div>
-<div class="form-row"><div class="form-group"><label>日期</label><input type="date" class="day-date" value="${dv.date||''}"></div><div class="form-group"><label>交通工具</label><select class="day-transport-select" style="width:100%;padding:10px 14px;border:2px solid #ddd6fe;border-radius:10px;font-size:0.95rem;font-family:inherit;">${Object.entries(TRANSPORT_MODES).map(([k,v])=>`<option value="${k}" ${k===(dv.transport||'car')?'selected':''}>${v.label}</option>`).join('')}</select></div></div>
-<div class="form-row"><div class="form-group"><label>🚩 出发地</label><input type="text" class="day-departure" value="${escapeHtml(dv.departure||'')}" placeholder="例如：昆明"></div><div class="form-group"><label>🏁 目的地</label><input type="text" class="day-destination" value="${escapeHtml(dv.destination||'')}" placeholder="例如：大理"></div></div>
+<div class="form-row"><div class="form-group"><label>日期</label><input type="date" class="day-date" value="${useDate}"></div><div class="form-group"><label>交通工具</label><select class="day-transport-select" style="width:100%;padding:10px 14px;border:2px solid #ddd6fe;border-radius:10px;font-size:0.95rem;font-family:inherit;">${Object.entries(TRANSPORT_MODES).map(([k,v])=>`<option value="${k}" ${k===useTransport?'selected':''}>${v.label}</option>`).join('')}</select></div></div>
+<div class="form-row"><div class="form-group"><label>🚩 出发地</label><input type="text" class="day-departure" value="${escapeHtml(useDeparture)}" placeholder="例如：昆明"></div><div class="form-group"><label>🏁 目的地</label><input type="text" class="day-destination" value="${escapeHtml(dv.destination||'')}" placeholder="例如：大理"></div></div>
 <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;"><button type="button" class="btn-small btn-calc" onclick="calcDayDistance(${dn})">📏 计算距离</button><button type="button" class="btn-small btn-nav" onclick="navigateDay(${dn})" style="display:${dv.distance?'inline-block':'none'};" id="nav-btn-${dn}">🧭 导航</button></div>
 <div class="distance-bar" id="dist-bar-${dn}" style="display:${dv.distance?'flex':'none'};">${dv.distance?`<span>📏</span><span>直线 <span class="dist-value">${dv.distance.straight}km</span></span><span style="color:#64748b;">|</span><span>约公路 <span class="road-dist" style="font-weight:600;color:#059669;">${dv.distance.road}km</span></span>`:''}</div>
 <div class="form-group"><label>🛤️ 途径地</label><div class="tag-input-row"><input type="text" class="via-input" placeholder="输入途径地，回车添加"><button type="button" onclick="addTag(this,'via')">添加</button></div><div class="tags-container via-tags">${(dv.viaList||[]).map(v=>`<span class="tag-item via">${escapeHtml(v)}<span class="remove-tag" onclick="this.parentElement.remove()">×</span></span>`).join('')}</div></div>
 <div class="form-group"><label>🏔️ 沿途景点</label><div class="tag-input-row"><input type="text" class="scenic-input" placeholder="输入景点名称，回车添加"><button type="button" onclick="addTag(this,'scenic')">添加</button></div><div class="tags-container scenic-tags">${(dv.scenicList||[]).map(s=>`<span class="tag-item scenic">${escapeHtml(s)}<span class="remove-tag" onclick="this.parentElement.remove()">×</span></span>`).join('')}</div></div>
-<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 14px;margin-bottom:14px;"><label style="display:block;margin-bottom:8px;font-weight:600;color:#059669;font-size:0.95rem;">💰 当日花费</label><div class="form-row-4">
-<div class="form-group" style="margin-bottom:0"><label style="color:#6366f1;font-size:0.82rem;">🏨 住宿</label><input type="number" class="cost-hotel cost-input-hotel" value="${cs.hotel||''}" min="0" step="0.01" placeholder="0"></div>
-<div class="form-group" style="margin-bottom:0"><label style="color:#d97706;font-size:0.82rem;">🚗 交通</label><input type="number" class="cost-transport cost-input-transport" value="${cs.transport||''}" min="0" step="0.01" placeholder="0"></div>
-<div class="form-group" style="margin-bottom:0"><label style="color:#dc2626;font-size:0.82rem;">🍽️ 餐饮</label><input type="number" class="cost-food cost-input-food" value="${cs.food||''}" min="0" step="0.01" placeholder="0"></div>
-<div class="form-group" style="margin-bottom:0"><label style="color:#4b5563;font-size:0.82rem;">📦 其他</label><input type="number" class="cost-other cost-input-other" value="${cs.other||''}" min="0" step="0.01" placeholder="0"></div>
+<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 14px;margin-bottom:14px;"><label style="display:block;margin-bottom:8px;font-weight:600;color:#059669;font-size:0.95rem;">💰 当日花费 <button type="button" class="btn-small" style="background:#6366f1;color:white;padding:3px 10px;font-size:0.75rem;border-radius:12px;margin-left:8px;" onclick="openCalc(${dn})">🧮 计算器</button></label><div class="form-row-4">
+<div class="form-group" style="margin-bottom:0"><label style="color:#6366f1;font-size:0.82rem;">🏨 住宿</label><div style="display:flex;gap:4px;align-items:center;"><input type="number" class="cost-hotel cost-input-hotel" value="${cs.hotel||''}" min="0" step="0.01" placeholder="0" style="flex:1;min-width:0"><button type="button" class="btn-small" style="padding:2px 8px;font-size:0.7rem;background:#eef2ff;color:#6366f1;border-radius:6px;" onclick="openCalc(${dn},'hotel')">🧮</button></div></div>
+<div class="form-group" style="margin-bottom:0"><label style="color:#d97706;font-size:0.82rem;">🚗 交通</label><div style="display:flex;gap:4px;align-items:center;"><input type="number" class="cost-transport cost-input-transport" value="${cs.transport||''}" min="0" step="0.01" placeholder="0" style="flex:1;min-width:0"><button type="button" class="btn-small" style="padding:2px 8px;font-size:0.7rem;background:#fffbeb;color:#d97706;border-radius:6px;" onclick="openCalc(${dn},'transport')">🧮</button></div></div>
+<div class="form-group" style="margin-bottom:0"><label style="color:#dc2626;font-size:0.82rem;">🍽️ 餐饮</label><div style="display:flex;gap:4px;align-items:center;"><input type="number" class="cost-food cost-input-food" value="${cs.food||''}" min="0" step="0.01" placeholder="0" style="flex:1;min-width:0"><button type="button" class="btn-small" style="padding:2px 8px;font-size:0.7rem;background:#fef2f2;color:#dc2626;border-radius:6px;" onclick="openCalc(${dn},'food')">🧮</button></div></div>
+<div class="form-group" style="margin-bottom:0"><label style="color:#4b5563;font-size:0.82rem;">📦 其他</label><div style="display:flex;gap:4px;align-items:center;"><input type="number" class="cost-other cost-input-other" value="${cs.other||''}" min="0" step="0.01" placeholder="0" style="flex:1;min-width:0"><button type="button" class="btn-small" style="padding:2px 8px;font-size:0.7rem;background:#f3f4f6;color:#4b5563;border-radius:6px;" onclick="openCalc(${dn},'other')">🧮</button></div></div>
 </div><div class="day-cost-total" id="day-total-${dn}">合计：¥0</div></div>
 <div class="form-group"><label>📝 当日备注</label><input type="text" class="day-notes" value="${escapeHtml(dv.notes||'')}" placeholder="简短备注..."></div>`;
 ct.appendChild(bl);
@@ -529,7 +566,7 @@ ${(d.scenicList||[]).length>0?`<div style="margin-top:6px;">${d.scenicList.map(s
 ${dc>0?`<div class="cost-tags"><span class="cost-tag cost-tag-total" style="background:#ecfdf5;color:#059669;font-weight:600;">💰 ¥${dc.toLocaleString()}</span>${COST_KEYS.map(k=>c[k]>0?`<span class="cost-tag cost-tag-${k}">${COST_LABELS[k]} ¥${c[k].toLocaleString()}</span>`:'').join('')}</div>`:''}
 ${d.departure&&d.destination?`<div style="margin-top:6px;"><button type="button" class="nav-link" onclick="openBaiduNav(${fc?JSON.stringify(fc):'null'},${tc2?JSON.stringify(tc2):'null'},'${escapeHtml(d.departure).replace(/'/g,"\\'")}','${escapeHtml(d.destination).replace(/'/g,"\\'")}','${d.transport||'car'}')">🧭 百度地图导航</button></div>`:''}
 ${d.notes?`<div class="day-notes">${escapeHtml(d.notes)}</div>`:''}</div>`;}).join('')}</div>`:''}
-<div class="trip-actions"><button class="btn-small btn-expand" onclick="toggleDays(${trip.id})">📋 展开每日</button><button class="btn-small btn-edit" onclick="editTrip(${trip.id})">✏️ 编辑</button><button class="btn-small btn-delete" onclick="deleteTrip(${trip.id})">🗑️ 删除</button></div></div>`;}).join('');}
+<div class="trip-actions"><button class="btn-small btn-expand" onclick="toggleDays(${trip.id})">📋 展开每日</button><button class="btn-small btn-edit" onclick="editTrip(${trip.id})">✏️ 编辑</button><button class="btn-small btn-delete" onclick="deleteTrip(${trip.id})">🗑️ 删除</button><button class="btn-small" style="background:#dbeafe;color:#1d4ed8;" onclick="exportTripPDF(${trip.id})">📄 导出PDF</button></div></div>`;}).join('');}
 
 function toggleDays(id){const e=document.getElementById(`days-${id}`);if(e){e.classList.toggle('days-expanded');e.classList.toggle('days-collapsed');}}
 
@@ -553,6 +590,142 @@ function importData(event){const f=event.target.files[0];if(!f)return;const r=ne
 function formatDate(s){if(!s)return'';const d=new Date(s);return`${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()}`;}
 function escapeHtml(t){if(!t)return'';const d=document.createElement('div');d.textContent=t;return d.innerHTML;}
 function showToast(m,t='success'){const e=document.getElementById('toast');e.textContent=m;e.className=`toast ${t} show`;setTimeout(()=>e.classList.remove('show'),3000);}
+
+// ========== EXPORT PDF ==========
+function exportTripPDF(tripId){
+  const trip = trips.find(t => t.id === tripId);
+  if(!trip){showToast('行程不存在','error');return;}
+  
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  
+  // 标题
+  doc.setFontSize(20);
+  doc.text(trip.name, 20, 20);
+  
+  // 基本信息
+  doc.setFontSize(12);
+  let y = 35;
+  doc.text(`出发日期: ${trip.startDate || '未设置'}`, 20, y);
+  y += 8;
+  doc.text(`结束日期: ${trip.endDate || '未设置'}`, 20, y);
+  y += 8;
+  doc.text(`类别: ${trip.category}`, 20, y);
+  y += 8;
+  const totalCost = tripCostTotal(trip);
+  doc.text(`总花费: ¥${totalCost.toLocaleString()}`, 20, y);
+  y += 15;
+  
+  // 每日行程表格
+  doc.setFontSize(14);
+  doc.text('每日行程', 20, y);
+  y += 10;
+  
+  if(trip.days && trip.days.length > 0){
+    trip.days.forEach((day, index) => {
+      if(y > 250) { doc.addPage(); y = 20; }
+      
+      doc.setFontSize(11);
+      doc.text(`第${index + 1}天 ${day.date ? formatDate(day.date) : ''}`, 20, y);
+      y += 7;
+      
+      doc.setFontSize(9);
+      const route = `${day.departure || ''} → ${day.destination || ''}`;
+      doc.text(`路线: ${route}`, 25, y);
+      y += 5;
+      
+      const transport = TRANSPORT_MODES[day.transport]?.label || '自驾';
+      doc.text(`交通: ${transport}`, 25, y);
+      y += 5;
+      
+      if(day.distance){
+        doc.text(`距离: 直线${day.distance.straight}km / 约${day.distance.road}km`, 25, y);
+        y += 5;
+      }
+      
+      const dayCost = dayCostTotal(day);
+      if(dayCost > 0){
+        doc.text(`花费: ¥${dayCost.toLocaleString()}`, 25, y);
+        y += 5;
+      }
+      
+      y += 5;
+    });
+  }
+  
+  // 花费汇总
+  if(y > 250) { doc.addPage(); y = 20; }
+  y += 10;
+  doc.setFontSize(14);
+  doc.text('花费汇总', 20, y);
+  y += 10;
+  
+  const agg = {hotel:0, transport:0, food:0, other:0};
+  (trip.days || []).forEach(d => {
+    const c = normCosts(d);
+    COST_KEYS.forEach(k => agg[k] += (c[k] || 0));
+  });
+  
+  doc.setFontSize(10);
+  doc.text(`🏨 住宿: ¥${agg.hotel.toLocaleString()}`, 25, y);
+  y += 7;
+  doc.text(`🚗 交通: ¥${agg.transport.toLocaleString()}`, 25, y);
+  y += 7;
+  doc.text(`🍽️ 餐饮: ¥${agg.food.toLocaleString()}`, 25, y);
+  y += 7;
+  doc.text(`📦 其他: ¥${agg.other.toLocaleString()}`, 25, y);
+  y += 7;
+  doc.setFontSize(12);
+  doc.text(`总计: ¥${totalCost.toLocaleString()}`, 25, y);
+  
+  // 下载
+  const fileName = `${trip.name.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '_')}_行程.pdf`;
+  doc.save(fileName);
+  showToast('PDF导出成功！','success');
+}
+
+// ========== CALCULATOR ==========
+let calcTargetInput=null;
+function openCalc(dn,field){
+  calcTargetInput=null;
+  document.getElementById('calcModal').classList.add('open');
+  document.getElementById('calcDisplay').value='';
+  document.getElementById('calcResult').textContent='';
+  document.body.style.overflow='hidden';
+  if(dn!==undefined && field){
+    calcTargetInput={dn,field};
+  }
+}
+function closeCalcModal(){document.getElementById('calcModal').classList.remove('open');document.body.style.overflow='';}
+function calcPress(v){
+  const d=document.getElementById('calcDisplay');
+  if(v==='C'){d.value='';document.getElementById('calcResult').textContent='';return;}
+  if(v==='BS'){d.value=d.value.slice(0,-1);return;}
+  if(v==='='){try{const r=eval(d.value);document.getElementById('calcResult').textContent='= '+r;d.value=r;}catch(e){document.getElementById('calcResult').textContent='错误';}return;}
+  if(v==='Enter'){
+    const r=parseFloat(document.getElementById('calcDisplay').value)||0;
+    if(calcTargetInput){
+      const bl=document.getElementById(`day-block-${calcTargetInput.dn}`);
+      if(bl){bl.querySelector(`.cost-${calcTargetInput.field}`).value=r;updateDayTotal(calcTargetInput.dn);}
+    }
+    closeCalcModal();return;
+  }
+  d.value+=v;
+}
 </script>
+<!-- Calculator Modal -->
+<div class="modal-overlay" id="calcModal" style="z-index:1200;"><div style="max-width:320px;margin:40px auto;"><div class="modal-header"><h2>🧮 计算器</h2><button class="modal-close" onclick="closeCalcModal()">✕</button></div><div class="modal-body" style="padding:20px;">
+  <input id="calcDisplay" type="text" readonly style="width:100%;padding:12px 14px;font-size:1.4rem;font-weight:600;text-align:right;border:2px solid #e0e0e0;border-radius:10px;margin-bottom:8px;font-family:inherit;background:#f8f9fa;" placeholder="0">
+  <div id="calcResult" style="text-align:right;color:#888;font-size:0.85rem;margin-bottom:12px;min-height:20px;"></div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+    <button class="calc-btn" onclick="calcPress('7')">7</button><button class="calc-btn" onclick="calcPress('8')">8</button><button class="calc-btn" onclick="calcPress('9')">9</button><button class="calc-btn op" onclick="calcPress('/')">÷</button>
+    <button class="calc-btn" onclick="calcPress('4')">4</button><button class="calc-btn" onclick="calcPress('5')">5</button><button class="calc-btn" onclick="calcPress('6')">6</button><button class="calc-btn op" onclick="calcPress('*')">×</button>
+    <button class="calc-btn" onclick="calcPress('1')">1</button><button class="calc-btn" onclick="calcPress('2')">2</button><button class="calc-btn" onclick="calcPress('3')">3</button><button class="calc-btn op" onclick="calcPress('-')">−</button>
+    <button class="calc-btn" onclick="calcPress('0')">0</button><button class="calc-btn" onclick="calcPress('.')">.</button><button class="calc-btn eq" onclick="calcPress('Enter')">✅</button><button class="calc-btn op" onclick="calcPress('+')">+</button>
+    <button class="calc-btn clr" onclick="calcPress('C')" style="grid-column:span 2;">C</button><button class="calc-btn clr" onclick="calcPress('BS')" style="grid-column:span 1;">⌫</button>
+    <button class="calc-btn op" onclick="calcPress('=')" style="grid-column:span 1;">=</button>
+  </div>
+  <style>.calc-btn{padding:14px;border:2px solid #e0e0e0;border-radius:10px;font-size:1.1rem;font-weight:600;cursor:pointer;background:white;transition:all 0.15s;font-family:inherit;}.calc-btn:active{transform:scale(0.95);}.calc-btn.op{background:#f0f4ff;color:#667eea;border-color:#c7d2fe;}.calc-btn.eq{background:#059669;color:white;border-color:#059669;}.calc-btn.clr{background:#fee2e2;color:#ef4444;border-color:#fecaca;}</style>
+</div></div></div>
 </body>
 </html>
