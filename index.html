@@ -606,6 +606,7 @@ function closeCalcModal(){document.getElementById('calcModal').classList.remove(
 function calcPress(v){
   const d=document.getElementById('calcDisplay');
   if(v==='C'){d.value='';document.getElementById('calcResult').textContent='';return;}
+  if(v==='BS'){d.value=d.value.slice(0,-1);return;}
   if(v==='='){try{const r=eval(d.value);document.getElementById('calcResult').textContent='= '+r;d.value=r;}catch(e){document.getElementById('calcResult').textContent='错误';}return;}
   if(v==='Enter'){
     const r=parseFloat(document.getElementById('calcDisplay').value)||0;
@@ -627,7 +628,8 @@ function calcPress(v){
     <button class="calc-btn" onclick="calcPress('4')">4</button><button class="calc-btn" onclick="calcPress('5')">5</button><button class="calc-btn" onclick="calcPress('6')">6</button><button class="calc-btn op" onclick="calcPress('*')">×</button>
     <button class="calc-btn" onclick="calcPress('1')">1</button><button class="calc-btn" onclick="calcPress('2')">2</button><button class="calc-btn" onclick="calcPress('3')">3</button><button class="calc-btn op" onclick="calcPress('-')">−</button>
     <button class="calc-btn" onclick="calcPress('0')">0</button><button class="calc-btn" onclick="calcPress('.')">.</button><button class="calc-btn eq" onclick="calcPress('Enter')">✅</button><button class="calc-btn op" onclick="calcPress('+')">+</button>
-    <button class="calc-btn clr" onclick="calcPress('C')" style="grid-column:span 2;">C</button><button class="calc-btn op" onclick="calcPress('=')">=</button>
+    <button class="calc-btn clr" onclick="calcPress('C')" style="grid-column:span 2;">C</button><button class="calc-btn clr" onclick="calcPress('BS')" style="grid-column:span 1;">⌫</button>
+    <button class="calc-btn op" onclick="calcPress('=')" style="grid-column:span 1;">=</button>
   </div>
   <style>.calc-btn{padding:14px;border:2px solid #e0e0e0;border-radius:10px;font-size:1.1rem;font-weight:600;cursor:pointer;background:white;transition:all 0.15s;font-family:inherit;}.calc-btn:active{transform:scale(0.95);}.calc-btn.op{background:#f0f4ff;color:#667eea;border-color:#c7d2fe;}.calc-btn.eq{background:#059669;color:white;border-color:#059669;}.calc-btn.clr{background:#fee2e2;color:#ef4444;border-color:#fecaca;}</style>
 </div></div></div>
