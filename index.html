@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>正义之旅 - 旅行记事本</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         *{margin:0;padding:0;box-sizing:border-box}
         body{font-family:'Noto Sans SC',sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;padding:20px}
@@ -596,94 +595,38 @@ function exportTripPDF(tripId){
   const trip = trips.find(t => t.id === tripId);
   if(!trip){showToast('行程不存在','error');return;}
   
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-  
-  // 标题
-  doc.setFontSize(20);
-  doc.text(trip.name, 20, 20);
-  
-  // 基本信息
-  doc.setFontSize(12);
-  let y = 35;
-  doc.text(`出发日期: ${trip.startDate || '未设置'}`, 20, y);
-  y += 8;
-  doc.text(`结束日期: ${trip.endDate || '未设置'}`, 20, y);
-  y += 8;
-  doc.text(`类别: ${trip.category}`, 20, y);
-  y += 8;
-  const totalCost = tripCostTotal(trip);
-  doc.text(`总花费: ¥${totalCost.toLocaleString()}`, 20, y);
-  y += 15;
-  
-  // 每日行程表格
-  doc.setFontSize(14);
-  doc.text('每日行程', 20, y);
-  y += 10;
-  
-  if(trip.days && trip.days.length > 0){
-    trip.days.forEach((day, index) => {
-      if(y > 250) { doc.addPage(); y = 20; }
-      
-      doc.setFontSize(11);
-      doc.text(`第${index + 1}天 ${day.date ? formatDate(day.date) : ''}`, 20, y);
-      y += 7;
-      
-      doc.setFontSize(9);
-      const route = `${day.departure || ''} → ${day.destination || ''}`;
-      doc.text(`路线: ${route}`, 25, y);
-      y += 5;
-      
-      const transport = TRANSPORT_MODES[day.transport]?.label || '自驾';
-      doc.text(`交通: ${transport}`, 25, y);
-      y += 5;
-      
-      if(day.distance){
-        doc.text(`距离: 直线${day.distance.straight}km / 约${day.distance.road}km`, 25, y);
-        y += 5;
-      }
-      
-      const dayCost = dayCostTotal(day);
-      if(dayCost > 0){
-        doc.text(`花费: ¥${dayCost.toLocaleString()}`, 25, y);
-        y += 5;
-      }
-      
-      y += 5;
-    });
-  }
-  
-  // 花费汇总
-  if(y > 250) { doc.addPage(); y = 20; }
-  y += 10;
-  doc.setFontSize(14);
-  doc.text('花费汇总', 20, y);
-  y += 10;
+  const printWindow = window.open('', '_blank');
+  if(!printWindow){showToast('请允许弹出窗口','error');return;}
   
   const agg = {hotel:0, transport:0, food:0, other:0};
   (trip.days || []).forEach(d => {
     const c = normCosts(d);
     COST_KEYS.forEach(k => agg[k] += (c[k] || 0));
   });
+  const totalCost = tripCostTotal(trip);
   
-  doc.setFontSize(10);
-  doc.text(`🏨 住宿: ¥${agg.hotel.toLocaleString()}`, 25, y);
-  y += 7;
-  doc.text(`🚗 交通: ¥${agg.transport.toLocaleString()}`, 25, y);
-  y += 7;
-  doc.text(`🍽️ 餐饮: ¥${agg.food.toLocaleString()}`, 25, y);
-  y += 7;
-  doc.text(`📦 其他: ¥${agg.other.toLocaleString()}`, 25, y);
-  y += 7;
-  doc.setFontSize(12);
-  doc.text(`总计: ¥${totalCost.toLocaleString()}`, 25, y);
+  let daysHtml = '';
+  if(trip.days && trip.days.length > 0){
+    trip.days.forEach((day, index) => {
+      const dayCost = dayCostTotal(day);
+      const c = normCosts(day);
+      const notesHtml = day.notes ? day.notes.replace(/\n/g,'<br>').replace(/\r\n/g,'<br>') : '';
+      daysHtml += '<div class="print-day"><h3>第'+(index+1)+'天 '+(day.date?formatDate(day.date):'')+'</h3><div class="day-info"><span>📍 '+(day.departure||'')+' → '+(day.destination||'')+'</span><span>'+(TRANSPORT_MODES[day.transport]?.icon||'🚗')+' '+(TRANSPORT_MODES[day.transport]?.label||'自驾')+'</span>'+(day.distance?'<span>📏 直线'+day.distance.straight+'km / 约'+day.distance.road+'km</span>':'')+'</div>'+(day.notes?'<div class="day-notes">'+notesHtml+'</div>':'')+(dayCost>0?'<div class="day-cost">🏨住宿:¥'+c.hotel.toLocaleString()+' 🚗交通:¥'+c.transport.toLocaleString()+' 🍽️餐饮:¥'+c.food.toLocaleString()+' 📦其他:¥'+c.other.toLocaleString()+' <b>小计:¥'+dayCost.toLocaleString()+'</b></div>':'')+'</div>';
+    });
+  }
   
-  // 下载
-  const fileName = `${trip.name.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '_')}_行程.pdf`;
-  doc.save(fileName);
-  showToast('PDF导出成功！','success');
+  const html = '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><title>'+trip.name.replace(/&/g,"&amp;").replace(/</g,"&lt;")+' - 行程单</title><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet"><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;color:#333;background:#fff;padding:20px;max-width:800px;margin:0 auto}h1{font-size:24px;color:#1d4ed8;border-bottom:2px solid #1d4ed8;padding-bottom:10px;margin-bottom:20px}.meta{display:flex;flex-wrap:wrap;gap:15px;margin-bottom:20px;font-size:14px;color:#666}.meta span{background:#f0f4ff;padding:4px 10px;border-radius:6px}h2{font-size:18px;color:#1d4ed8;margin:25px 0 15px;border-left:4px solid #1d4ed8;padding-left:10px}.print-day{border:1px solid #e5e7eb;border-radius:8px;padding:15px;margin-bottom:15px;page-break-inside:avoid}.print-day h3{font-size:15px;color:#1d4ed8;margin-bottom:8px}.day-info{display:flex;flex-wrap:wrap;gap:10px;font-size:13px;color:#666;margin-bottom:8px}.day-notes{font-size:13px;color:#444;background:#f9fafb;padding:8px;border-radius:6px;margin:8px 0;white-space:pre-wrap}.day-cost{font-size:12px;color:#666;background:#eff6ff;padding:6px 8px;border-radius:6px;margin-top:8px}.day-cost b{color:#1d4ed8}.summary{background:#f0f4ff;border:1px solid #bfdbfe;border-radius:8px;padding:15px;margin-top:20px}.summary-row{display:flex;justify-content:space-between;font-size:14px;padding:4px 0}.summary-total{border-top:2px solid #1d4ed8;margin-top:8px;padding-top:8px;font-size:16px;font-weight:bold;color:#1d4ed8}@media print{body{padding:10px}.no-print{display:none}}</style></head><body><h1>📍 '+trip.name.replace(/&/g,"&amp;").replace(/</g,"&lt;")+'</h1><div class="meta"><span>📅 出发: '+(trip.startDate||'未设置')+'</span><span>📅 结束: '+(trip.endDate||'未设置')+'</span><span>🏷️ '+trip.category+'</span><span>💰 总花费: ¥'+totalCost.toLocaleString()+'</span></div><h2>每日行程</h2>'+(daysHtml||'<p style="color:#999">暂无每日行程</p>')+'<h2>花费汇总</h2><div class="summary"><div class="summary-row"><span>🏨 住宿</span><span>¥'+agg.hotel.toLocaleString()+'</span></div><div class="summary-row"><span>🚗 交通</span><span>¥'+agg.transport.toLocaleString()+'</span></div><div class="summary-row"><span>🍽️ 餐饮</span><span>¥'+agg.food.toLocaleString()+'</span></div><div class="summary-row"><span>📦 其他</span><span>¥'+agg.other.toLocaleString()+'</span></div><div class="summary-row summary-total"><span>总计</span><span>¥'+totalCost.toLocaleString()+'</span></div></div><div class="no-print" style="margin-top:30px;text-align:center"><button onclick="window.print()" style="padding:10px 30px;background:#1d4ed8;color:#fff;border:none;border-radius:8px;font-size:16px;cursor:pointer">🖨️ 打印/保存PDF</button><p style="font-size:12px;color:#999;margin-top:8px">在打印对话框中选择「另存为PDF」即可</p></div></body></html>';
+  
+  printWindow.document.open();
+  printWindow.document.write(html);
+  printWindow.document.close();
+  
+  printWindow.onload = () => {
+    setTimeout(() => { printWindow.print(); }, 800);
+  };
+  
+  showToast('正在生成打印页面...','success');
 }
-
 // ========== CALCULATOR ==========
 let calcTargetInput=null;
 function openCalc(dn,field){
