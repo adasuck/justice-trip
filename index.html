@@ -483,8 +483,13 @@ function wgs84ToGcj02(lat,lon){const PI=Math.PI,a=6378245.0,ee=0.006693421622965
 function _tLat(x,y){let r=-100+2*x+3*y+.2*y*y+.1*x*y+.2*Math.sqrt(Math.abs(x));r+=(20*Math.sin(6*x*PI)+20*Math.sin(2*x*PI))*2/3;r+=(20*Math.sin(y*PI)+40*Math.sin(y/3*PI))*2/3;r+=(160*Math.sin(y/12*PI)+320*Math.sin(y*PI/30))*2/3;return r;}
 function _tLon(x,y){let r=300+x+2*y+.1*x*x+.1*x*y+.1*Math.sqrt(Math.abs(x));r+=(20*Math.sin(6*x*PI)+20*Math.sin(2*x*PI))*2/3;r+=(20*Math.sin(x*PI)+40*Math.sin(x/3*PI))*2/3;r+=(150*Math.sin(x/12*PI)+300*Math.sin(x/30*PI))*2/3;return r;}
 function openBaiduNavDirect(place){
-    var url="https://map.baidu.com/search/"+encodeURIComponent(place);
-    window.open(url,"_blank");
+    var scheme="baidumap://map/direction?destination=name:"+encodeURIComponent(place)+"&mode=driving&src=webmap";
+    var webUrl="https://map.baidu.com/search/"+encodeURIComponent(place);
+    var t=Date.now();
+    window.location.href=scheme;
+    setTimeout(function(){
+      if(Date.now()-t<2200){window.location.href=webUrl;}
+    },2000);
   }
   function openBaiduNav(fc,tc,fn,tn,tm){if(!fn||!tn){showToast('请先填写出发地和目的地','error');return;}const m=TRANSPORT_MODES[tm]?.baiduMode||'driving';let au,wu;if(fc&&tc){const f=wgs84ToGcj02(fc.lat,fc.lon),t=wgs84ToGcj02(tc.lat,tc.lon);au=`baidumap://map/direction?origin=${encodeURIComponent(fn)}|latlng:${f.lat.toFixed(6)},${f.lon.toFixed(6)}&destination=${encodeURIComponent(tn)}|latlng:${t.lat.toFixed(6)},${t.lon.toFixed(6)}&mode=${m}&coord_type=gcj02&src=webapp.baidu.openAPIdemo`;wu=`https://api.map.baidu.com/direction?origin=${encodeURIComponent(fn)}|latlng:${f.lat.toFixed(6)},${f.lon.toFixed(6)}&destination=${encodeURIComponent(tn)}|latlng:${t.lat.toFixed(6)},${t.lon.toFixed(6)}&mode=${m}&coord_type=gcj02&output=html&src=正义之旅`;}else{au=`baidumap://map/direction?origin=${encodeURIComponent(fn)}&destination=${encodeURIComponent(tn)}&mode=${m}&src=webapp.baidu.openAPIdemo`;wu=`https://api.map.baidu.com/direction?origin=${encodeURIComponent(fn)}&destination=${encodeURIComponent(tn)}&mode=${m}&output=html&src=正义之旅`;}let o=false;const h=()=>{if(document.hidden)o=true;};document.addEventListener('visibilitychange',h);window.location.href=au;setTimeout(()=>{document.removeEventListener('visibilitychange',h);if(!o)window.open(wu,'_blank');},1500);}
 
