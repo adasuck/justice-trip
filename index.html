@@ -133,10 +133,10 @@
         .empty-state{text-align:center;padding:50px 20px;color:#999}
         .empty-state .icon{font-size:3.5rem;margin-bottom:16px;opacity:0.5}
         .empty-state h3{font-size:1.2rem;margin-bottom:8px;color:#666}
-        .export-btn{position:fixed;bottom:28px;right:28px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;width:56px;height:56px;border-radius:50%;border:none;font-size:1.4rem;cursor:pointer;box-shadow:0 5px 20px rgba(102,126,234,0.4);transition:all 0.3s;display:flex;align-items:center;justify-content:center;z-index:50}
-        .export-btn:hover{transform:scale(1.1)}
-        .import-btn{position:fixed;bottom:28px;right:96px;width:56px;height:56px;border-radius:50%;border:none;background:linear-gradient(135deg,#10b981,#059669);color:white;font-size:1.4rem;cursor:pointer;box-shadow:0 5px 20px rgba(16,185,129,0.4);transition:all 0.3s;display:flex;align-items:center;justify-content:center;z-index:50}
-        .import-btn:hover{transform:scale(1.1)}
+        
+        
+        
+        
         #importInput{display:none}
         .toast{position:fixed;top:20px;right:20px;background:#333;color:white;padding:14px 22px;border-radius:12px;box-shadow:0 5px 20px rgba(0,0,0,0.2);transform:translateX(400px);transition:transform 0.3s;z-index:1100}
         .toast.show{transform:translateX(0)}.toast.success{background:#10b981}.toast.error{background:#ef4444}
@@ -181,7 +181,7 @@
         </div>
         <div class="main-content">
             <div class="panel" id="tripsPanel">
-                <h2 style="justify-content:space-between;"><span>🎒 我的行程</span><span class="trip-count" id="tripCount">0</span></h2>
+                <h2 style="justify-content:space-between;"><span>🎒 我的行程</span><span style="display:flex;gap:8px;align-items:center;"><span style="font-size:0.85rem;color:#667eea;cursor:pointer;" onclick="document.getElementById('importInput').click()">📤 导入</span><span style="font-size:0.85rem;color:#667eea;cursor:pointer;" onclick="exportData()">📥 导出</span><span class="trip-count" id="tripCount">0</span></span></h2>
                 <div class="filter-bar"><input type="text" id="searchInput" placeholder="🔍 搜索行程名称、地点或景点..."></div>
                 <div id="tripsList"><div class="empty-state"><div class="icon">🌍</div><h3>还没有行程记录</h3><p>点击上方卡片添加你的第一段旅程吧！</p></div></div>
             </div>
@@ -213,9 +213,7 @@
             <div style="display:flex;gap:12px;margin-top:20px;"><button type="submit" class="btn btn-primary" id="submitBtn" style="flex:1;">✨ 添加行程</button><button type="button" class="btn btn-secondary" id="cancelBtn" style="display:none;" onclick="cancelEdit()">取消编辑</button></div>
         </form>
     </div></div></div>
-    <button class="import-btn" onclick="document.getElementById('importInput').click()">📤</button>
-    <input type="file" id="importInput" accept=".json" onchange="importData(event)">
-    <button class="export-btn" onclick="exportData()">📥</button>
+        <span style="font-size:0.85rem;color:#667eea;cursor:pointer;margin-left:12px;" onclick="exportData()">📥 导出</span>
     <div class="toast" id="toast"></div>
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
