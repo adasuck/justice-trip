@@ -181,7 +181,7 @@
         </div>
         <div class="main-content">
             <div class="panel" id="tripsPanel">
-                <h2 style="justify-content:space-between;"><span>🎒 我的行程</span><span class="trip-count" id="tripCount">0</span></span></h2>
+                <h2 style="justify-content:space-between;"><span>🎒 我的行程</span><label style="font-size:0.8rem;color:#666;cursor:pointer;margin-left:16px;"><input type="checkbox" id="googleToggle" onchange="toggleMapProvider()" style="margin-right:4px;">🗺️ 谷歌</label><span class="trip-count" id="tripCount">0</span></span></h2>
                 <div class="filter-bar"><input type="text" id="searchInput" placeholder="🔍 搜索行程名称、地点或景点..."></div>
                 <div id="tripsList"><div class="empty-state"><div class="icon">🌍</div><h3>还没有行程记录</h3><p>点击上方卡片添加你的第一段旅程吧！</p></div></div>
             </div>
@@ -481,15 +481,46 @@ function wgs84ToGcj02(lat,lon){const PI=Math.PI,a=6378245.0,ee=0.006693421622965
 function _tLat(x,y){let r=-100+2*x+3*y+.2*y*y+.1*x*y+.2*Math.sqrt(Math.abs(x));r+=(20*Math.sin(6*x*PI)+20*Math.sin(2*x*PI))*2/3;r+=(20*Math.sin(y*PI)+40*Math.sin(y/3*PI))*2/3;r+=(160*Math.sin(y/12*PI)+320*Math.sin(y*PI/30))*2/3;return r;}
 function _tLon(x,y){let r=300+x+2*y+.1*x*x+.1*x*y+.1*Math.sqrt(Math.abs(x));r+=(20*Math.sin(6*x*PI)+20*Math.sin(2*x*PI))*2/3;r+=(20*Math.sin(x*PI)+40*Math.sin(x/3*PI))*2/3;r+=(150*Math.sin(x/12*PI)+300*Math.sin(x/30*PI))*2/3;return r;}
 function openBaiduNavDirect(place){
+  if(useGoogleMaps){
+    var scheme="comgooglemaps://?daddr="+encodeURIComponent(place)+"&directionsmode=driving";
+    var webUrl="https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(place);
+  } else {
     var scheme="baidumap://map/direction?destination="+encodeURIComponent(place)+"&mode=driving&src=webmap";
     var webUrl="https://map.baidu.com/search/"+encodeURIComponent(place);
-    var t=Date.now();
-    window.location.href=scheme;
-    setTimeout(function(){
-      if(Date.now()-t<2200){window.location.href=webUrl;}
-    },2000);
   }
-  function openBaiduNav(fc,tc,fn,tn,tm){if(!fn||!tn){showToast('请先填写出发地和目的地','error');return;}const m=TRANSPORT_MODES[tm]?.baiduMode||'driving';let au,wu;if(fc&&tc){const f=wgs84ToGcj02(fc.lat,fc.lon),t=wgs84ToGcj02(tc.lat,tc.lon);au=`baidumap://map/direction?origin=${encodeURIComponent(fn)}|latlng:${f.lat.toFixed(6)},${f.lon.toFixed(6)}&destination=${encodeURIComponent(tn)}|latlng:${t.lat.toFixed(6)},${t.lon.toFixed(6)}&mode=${m}&coord_type=gcj02&src=webapp.baidu.openAPIdemo`;wu=`https://api.map.baidu.com/direction?origin=${encodeURIComponent(fn)}|latlng:${f.lat.toFixed(6)},${f.lon.toFixed(6)}&destination=${encodeURIComponent(tn)}|latlng:${t.lat.toFixed(6)},${t.lon.toFixed(6)}&mode=${m}&coord_type=gcj02&output=html&src=正义之旅`;}else{au=`baidumap://map/direction?origin=${encodeURIComponent(fn)}&destination=${encodeURIComponent(tn)}&mode=${m}&src=webapp.baidu.openAPIdemo`;wu=`https://api.map.baidu.com/direction?origin=${encodeURIComponent(fn)}&destination=${encodeURIComponent(tn)}&mode=${m}&output=html&src=正义之旅`;}let o=false;const h=()=>{if(document.hidden)o=true;};document.addEventListener('visibilitychange',h);window.location.href=au;setTimeout(()=>{document.removeEventListener('visibilitychange',h);if(!o)window.open(wu,'_blank');},1500);}
+  var t=Date.now();
+  window.location.href=scheme;
+  setTimeout(function(){
+    if(Date.now()-t<2200){window.location.href=webUrl;}
+  },2000);
+}
+  function openBaiduNav(fc,tc,fn,tn,tm){
+  if(!fn||!tn){showToast('请先填写出发地和目的地','error');return;}
+  const m=TRANSPORT_MODES[tm]?.baiduMode||'driving';
+  let au,wu;
+  if(useGoogleMaps){
+    const mode=tm==='walking'?'walking':tm==='biking'?'bicycling':'driving';
+    if(fc&&tc){const f=wgs84ToGcj02(fc.lat,fc.lon),t=wgs84ToGcj02(tc.lat,tc.lon);
+      au=`comgooglemaps://?saddr=${f.lat.toFixed(6)},${f.lon.toFixed(6)}&daddr=${t.lat.toFixed(6)},${t.lon.toFixed(6)}&directionsmode=${mode}`;
+      wu=`https://www.google.com/maps/dir/${encodeURIComponent(fn)}/${encodeURIComponent(tn)}/?api=1`;
+    }else{
+      au=`comgooglemaps://?daddr=${encodeURIComponent(tn)}&directionsmode=${mode}`;
+      wu=`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(tn)}`;
+    }
+  }else{
+    if(fc&&tc){const f=wgs84ToGcj02(fc.lat,fc.lon),t=wgs84ToGcj02(tc.lat,tc.lon);
+      au=`baidumap://map/direction?origin=${encodeURIComponent(fn)}|latlng:${f.lat.toFixed(6)},${f.lon.toFixed(6)}&destination=${encodeURIComponent(tn)}|latlng:${t.lat.toFixed(6)},${t.lon.toFixed(6)}&mode=${m}&coord_type=gcj02&src=webapp.baidu.openAPIdemo`;
+      wu=`https://api.map.baidu.com/direction?origin=${encodeURIComponent(fn)}|latlng:${f.lat.toFixed(6)},${f.lon.toFixed(6)}&destination=${encodeURIComponent(tn)}|latlng:${t.lat.toFixed(6)},${t.lon.toFixed(6)}&mode=${m}&coord_type=gcj02&output=html&src=正义之旅`;
+    }else{
+      au=`baidumap://map/direction?origin=${encodeURIComponent(fn)}&destination=${encodeURIComponent(tn)}&mode=${m}&src=webapp.baidu.openAPIdemo`;
+      wu=`https://api.map.baidu.com/direction?origin=${encodeURIComponent(fn)}&destination=${encodeURIComponent(tn)}&mode=${m}&output=html&src=正义之旅`;
+    }
+  }
+  let o=false;const h=()=>{if(document.hidden)o=true;};
+  document.addEventListener('visibilitychange',h);
+  window.location.href=au;
+  setTimeout(()=>{document.removeEventListener('visibilitychange',h);if(!o)window.open(wu,'_blank');},1500);
+}
 
 // ========== DAY BLOCK ==========
 function addDayBlock(data=null){dayCounter++;const dn=dayCounter,ct=document.getElementById('daysContainer'),bl=document.createElement('div');bl.className='day-block';bl.id=`day-block-${dn}`;const dv=data||{},di=ct.querySelectorAll('.day-block').length+1;
@@ -575,6 +606,14 @@ ${d.notes?`<div class="day-notes">${escapeHtml(d.notes)}</div>`:''}</div>`;}).jo
 <div class="trip-actions"><button class="btn-small btn-expand" onclick="toggleDays(${trip.id})">📋 展开每日</button><button class="btn-small btn-edit" onclick="editTrip(${trip.id})">✏️ 编辑</button><button class="btn-small btn-delete" onclick="deleteTrip(${trip.id})">🗑️ 删除</button><button class="btn-small" style="background:#dbeafe;color:#1d4ed8;" onclick="exportTripPDF(${trip.id})">📄 导出PDF</button></div></div>`;}).join('');}
 
 let currentMapPlace = '';
+  let useGoogleMaps = localStorage.getItem('useGoogleMaps') === 'true';
+  function toggleMapProvider(){
+    useGoogleMaps = !useGoogleMaps;
+    localStorage.setItem('useGoogleMaps', useGoogleMaps);
+    var el = document.getElementById('googleToggle');
+    if(el) el.checked = useGoogleMaps;
+  }
+
 
 function openMapNavFromData(el){const p=el.dataset.place;if(p)openMapNav(p);}
 function openMapNav(placeName){
@@ -752,5 +791,7 @@ function calcPress(v){
   </div>
   <style>.calc-btn{padding:14px;border:2px solid #e0e0e0;border-radius:10px;font-size:1.1rem;font-weight:600;cursor:pointer;background:white;transition:all 0.15s;font-family:inherit;}.calc-btn:active{transform:scale(0.95);}.calc-btn.op{background:#f0f4ff;color:#667eea;border-color:#c7d2fe;}.calc-btn.eq{background:#059669;color:white;border-color:#059669;}.calc-btn.clr{background:#fee2e2;color:#ef4444;border-color:#fecaca;}</style>
 </div></div></div>
+
+<script>setTimeout(function(){var el=document.getElementById("googleToggle");if(el)el.checked=useGoogleMaps;},0);</script>
 </body>
 </html>
