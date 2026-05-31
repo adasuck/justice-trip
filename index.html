@@ -137,7 +137,7 @@
         
         
         
-        #importInput{display:none}
+        
         .toast{position:fixed;top:20px;right:20px;background:#333;color:white;padding:14px 22px;border-radius:12px;box-shadow:0 5px 20px rgba(0,0,0,0.2);transform:translateX(400px);transition:transform 0.3s;z-index:1100}
         .toast.show{transform:translateX(0)}.toast.success{background:#10b981}.toast.error{background:#ef4444}
         @keyframes fadeIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
@@ -181,7 +181,7 @@
         </div>
         <div class="main-content">
             <div class="panel" id="tripsPanel">
-                <h2 style="justify-content:space-between;"><span>🎒 我的行程</span><span style="display:flex;gap:8px;align-items:center;"><span style="font-size:0.85rem;color:#667eea;cursor:pointer;" onclick="document.getElementById('importInput').click()">📤 导入</span><span style="font-size:0.85rem;color:#667eea;cursor:pointer;" onclick="exportData()">📥 导出</span><span class="trip-count" id="tripCount">0</span></span></h2>
+                <h2 style="justify-content:space-between;"><span>🎒 我的行程</span><span class="trip-count" id="tripCount">0</span></span></h2>
                 <div class="filter-bar"><input type="text" id="searchInput" placeholder="🔍 搜索行程名称、地点或景点..."></div>
                 <div id="tripsList"><div class="empty-state"><div class="icon">🌍</div><h3>还没有行程记录</h3><p>点击上方卡片添加你的第一段旅程吧！</p></div></div>
             </div>
@@ -213,7 +213,7 @@
             <div style="display:flex;gap:12px;margin-top:20px;"><button type="submit" class="btn btn-primary" id="submitBtn" style="flex:1;">✨ 添加行程</button><button type="button" class="btn btn-secondary" id="cancelBtn" style="display:none;" onclick="cancelEdit()">取消编辑</button></div>
         </form>
     </div></div></div>
-        <span style="font-size:0.85rem;color:#667eea;cursor:pointer;margin-left:12px;" onclick="exportData()">📥 导出</span>
+        
     <div class="toast" id="toast"></div>
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -616,8 +616,8 @@ function saveTrips(){
     trips.forEach(t=>saveTripToCloud(t));
   }
 }
-function exportData(){if(!trips.length){showToast('没有数据可导出','error');return;}const b=new Blob([JSON.stringify(trips,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`正义之旅_${new Date().toISOString().split('T')[0]}.json`;a.click();URL.revokeObjectURL(a.href);showToast('数据导出成功！','success');}
-function importData(event){const f=event.target.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{try{const d=JSON.parse(e.target.result);if(Array.isArray(d)){d.forEach(t=>{t.updatedAt=new Date().toISOString();(t.days||[]).forEach(dd=>{if(!dd.costs)dd.costs=normCosts(dd);});});trips=d.concat(trips);saveTrips();if(currentUser)d.forEach(t=>saveTripToCloud(t));renderTrips();updateStats();showToast(`成功导入 ${d.length} 条行程！`,'success');}else showToast('文件格式不正确','error');}catch{showToast('文件解析失败','error');}};r.readAsText(f);event.target.value='';}
+
+
 function formatDate(s){if(!s)return'';const d=new Date(s);return`${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()}`;}
 function escapeHtml(t){if(!t)return'';const d=document.createElement('div');d.textContent=t;return d.innerHTML;}
 function showToast(m,t='success'){const e=document.getElementById('toast');e.textContent=m;e.className=`toast ${t} show`;setTimeout(()=>e.classList.remove('show'),3000);}
