@@ -667,7 +667,7 @@ h2 { font-size:18px; color:#1d4ed8; margin:25px 0 15px; border-left:4px solid #1
 .summary { background:#f0f4ff; border:1px solid #bfdbfe; border-radius:8px; padding:15px; margin-top:20px; }
 .summary-row { display:flex; justify-content:space-between; font-size:14px; padding:4px 0; }
 .summary-total { border-top:2px solid #1d4ed8; margin-top:8px; padding-top:8px; font-size:16px; font-weight:bold; color:#1d4ed8; }
-@media print { body { padding:10px; } .no-print { display:none; } }
+@media print { body { padding:10px; } .no-print { display:none; } #mapModal { display:none !important; } }
 </style>`;
   const html = `<!DOCTYPE html>
 <html lang="zh-CN">
@@ -700,7 +700,7 @@ ${(daysHtml||'<p style="color:#999;">暂无每日行程</p>')}
 <p style="font-size:12px;color:#999;margin-top:8px;">在打印对话框中选择「另存为PDF」即可</p>
 </div>
 
-<div class="modal" id="mapModal"><div class="modal-content" style="max-width:360px;text-align:center;"><div class="modal-header" style="justify-content:center;"><h3 class="modal-title" id="mapModalTitle"></h3></div><div style="padding:20px 24px 10px;"><p style="color:#666;font-size:14px;margin-bottom:16px;" id="mapPlaceNameModal"></p><button onclick="openBaiduMap(currentMapPlace)" style="display:block;width:100%;padding:12px;margin-bottom:10px;background:#3385ff;color:#fff;border:none;border-radius:10px;font-size:15px;cursor:pointer;font-family:inherit;">百度地图</button><button onclick="openGoogleMap(currentMapPlace)" style="display:block;width:100%;padding:12px;margin-bottom:10px;background:#4285f4;color:#fff;border:none;border-radius:10px;font-size:15px;cursor:pointer;font-family:inherit;">谷歌地图</button><button onclick="closeMapModal()" style="display:block;width:100%;padding:12px;background:#f3f4f6;color:#374151;border:none;border-radius:10px;font-size:15px;cursor:pointer;font-family:inherit;">取消</button></div></div></div>
+<div class="modal" id="mapModal"><div class="modal-content" style="max-width:360px;text-align:center;"><div class="modal-header" style="justify-content:center;"><h3 class="modal-title" id="mapModalTitle"></h3></div><div style="padding:20px 24px 10px;"><p style="color:#666;font-size:14px;margin-bottom:16px;" id="mapPlaceNameModal"></p></div></div></div>
 </body>
 </html>`;
   printWindow.document.open();
